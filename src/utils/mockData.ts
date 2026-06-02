@@ -10,15 +10,18 @@ const poolConfigs: {
   warningLevel: number;
   position: { x: number; y: number };
 }[] = [
-  { id: 'pool-1', code: 'P-001', name: '集水池', type: 'collection', capacity: 800, maxLevel: 5.0, warningLevel: 4.5, position: { x: 80, y: 120 } },
-  { id: 'pool-2', code: 'P-002', name: '格栅渠', type: 'grating', capacity: 200, maxLevel: 2.5, warningLevel: 2.2, position: { x: 280, y: 120 } },
-  { id: 'pool-3', code: 'P-003', name: '调节池', type: 'regulation', capacity: 1200, maxLevel: 6.0, warningLevel: 5.5, position: { x: 480, y: 120 } },
-  { id: 'pool-4', code: 'P-004', name: '厌氧池', type: 'anaerobic', capacity: 600, maxLevel: 4.5, warningLevel: 4.0, position: { x: 200, y: 320 } },
-  { id: 'pool-5', code: 'P-005', name: '缺氧池', type: 'anoxic', capacity: 500, maxLevel: 4.0, warningLevel: 3.6, position: { x: 400, y: 320 } },
-  { id: 'pool-6', code: 'P-006', name: '好氧池', type: 'aerobic', capacity: 800, maxLevel: 4.5, warningLevel: 4.0, position: { x: 600, y: 320 } },
-  { id: 'pool-7', code: 'P-007', name: '膜池', type: 'membrane', capacity: 400, maxLevel: 4.0, warningLevel: 3.5, position: { x: 800, y: 320 } },
-  { id: 'pool-8', code: 'P-008', name: '消毒池', type: 'disinfection', capacity: 300, maxLevel: 3.5, warningLevel: 3.0, position: { x: 1000, y: 320 } },
-  { id: 'pool-9', code: 'P-009', name: '污泥浓缩池', type: 'sludge', capacity: 250, maxLevel: 3.5, warningLevel: 3.0, position: { x: 900, y: 520 } },
+  // 第一行：预处理
+  { id: 'pool-1', code: 'P-001', name: '集水池', type: 'collection', capacity: 800, maxLevel: 5.0, warningLevel: 4.5, position: { x: 80, y: 80 } },
+  { id: 'pool-2', code: 'P-002', name: '格栅渠', type: 'grating', capacity: 200, maxLevel: 2.5, warningLevel: 2.2, position: { x: 340, y: 80 } },
+  { id: 'pool-3', code: 'P-003', name: '调节池', type: 'regulation', capacity: 1200, maxLevel: 6.0, warningLevel: 5.5, position: { x: 600, y: 80 } },
+  // 第二行：生化处理
+  { id: 'pool-5', code: 'P-005', name: '缺氧池', type: 'anoxic', capacity: 500, maxLevel: 4.0, warningLevel: 3.6, position: { x: 340, y: 300 } },
+  { id: 'pool-4', code: 'P-004', name: '厌氧池', type: 'anaerobic', capacity: 600, maxLevel: 4.5, warningLevel: 4.0, position: { x: 600, y: 300 } },
+  { id: 'pool-9', code: 'P-009', name: '污泥浓缩池', type: 'sludge', capacity: 250, maxLevel: 3.5, warningLevel: 3.0, position: { x: 860, y: 300 } },
+  // 第三行：后续处理
+  { id: 'pool-6', code: 'P-006', name: '好氧池', type: 'aerobic', capacity: 800, maxLevel: 4.5, warningLevel: 4.0, position: { x: 340, y: 520 } },
+  { id: 'pool-7', code: 'P-007', name: '膜池', type: 'membrane', capacity: 400, maxLevel: 4.0, warningLevel: 3.5, position: { x: 600, y: 520 } },
+  { id: 'pool-8', code: 'P-008', name: '消毒池', type: 'disinfection', capacity: 300, maxLevel: 3.5, warningLevel: 3.0, position: { x: 860, y: 520 } },
 ];
 
 function randomInRange(min: number, max: number): number {
@@ -161,17 +164,23 @@ export function generateInitialPools(): PoolData[] {
 
 export function generateFlowPaths(): FlowPath[] {
   return [
+    // 第一行：预处理流程（智能自动：右→左）
     { id: 'f-1', from: 'pool-1', to: 'pool-2', type: 'forward', active: true },
     { id: 'f-2', from: 'pool-2', to: 'pool-3', type: 'forward', active: true },
-    { id: 'f-3', from: 'pool-3', to: 'pool-4', type: 'forward', active: true },
-    { id: 'f-4', from: 'pool-4', to: 'pool-5', type: 'forward', active: true },
-    { id: 'f-5', from: 'pool-5', to: 'pool-6', type: 'forward', active: true },
-    { id: 'f-6', from: 'pool-6', to: 'pool-7', type: 'forward', active: true },
-    { id: 'f-7', from: 'pool-7', to: 'pool-8', type: 'forward', active: true },
-    { id: 'f-8', from: 'pool-4', to: 'pool-4', type: 'internal', active: true },
-    { id: 'f-9', from: 'pool-6', to: 'pool-5', type: 'recycle', active: true },
-    { id: 'f-10', from: 'pool-7', to: 'pool-4', type: 'recycle', active: true },
-    { id: 'f-11', from: 'pool-7', to: 'pool-9', type: 'forward', active: true },
+    // 第二行：生化处理（智能自动：右→左）
+    { id: 'f-3', from: 'pool-5', to: 'pool-4', type: 'forward', active: true },
+    // 第三行：后续处理（智能自动：右→左）
+    { id: 'f-4', from: 'pool-6', to: 'pool-7', type: 'forward', active: true },
+    { id: 'f-5', from: 'pool-7', to: 'pool-9', type: 'forward', active: true },
+    // 纵向连接（智能自动：调节池在厌氧池上方 → 底→顶）
+    { id: 'f-6', from: 'pool-3', to: 'pool-4', type: 'forward', active: true },
+    { id: 'f-7', from: 'pool-4', to: 'pool-7', type: 'forward', active: true },
+    { id: 'f-8', from: 'pool-7', to: 'pool-8', type: 'forward', active: true },
+    // 内部循环
+    { id: 'f-9', from: 'pool-4', to: 'pool-4', type: 'internal', active: true },
+    // 回流管线（智能自动选择最优方向）
+    { id: 'f-10', from: 'pool-6', to: 'pool-5', type: 'recycle', active: true },
+    { id: 'f-11', from: 'pool-7', to: 'pool-4', type: 'recycle', active: true },
     { id: 'f-12', from: 'pool-9', to: 'pool-3', type: 'recycle', active: true },
   ];
 }

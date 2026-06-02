@@ -43,12 +43,16 @@ export interface Parameter {
   normalRange: [number, number];
 }
 
+export type ConnectionSide = 'top' | 'bottom' | 'left' | 'right';
+
 export interface FlowPath {
   id: string;
   from: string;
   to: string;
   type: 'forward' | 'recycle' | 'internal';
   active: boolean;
+  fromSide?: ConnectionSide;
+  toSide?: ConnectionSide;
 }
 
 export interface Alarm {
