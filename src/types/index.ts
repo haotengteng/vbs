@@ -1,0 +1,66 @@
+export interface PoolData {
+  id: string;
+  code: string;
+  name: string;
+  type: PoolType;
+  capacity: number;
+  maxLevel: number;
+  warningLevel: number;
+  currentLevel: number;
+  flowRate: number;
+  status: 'normal' | 'warning' | 'danger';
+  devices: Device[];
+  parameters: Parameter[];
+  position: { x: number; y: number };
+}
+
+export type PoolType =
+  | 'collection'
+  | 'grating'
+  | 'regulation'
+  | 'anaerobic'
+  | 'anoxic'
+  | 'aerobic'
+  | 'membrane'
+  | 'disinfection'
+  | 'sludge';
+
+export interface Device {
+  id: string;
+  name: string;
+  type: string;
+  status: 'running' | 'stopped' | 'fault' | 'maintenance';
+  runtime: number;
+}
+
+export interface Parameter {
+  id: string;
+  name: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  normalRange: [number, number];
+}
+
+export interface FlowPath {
+  id: string;
+  from: string;
+  to: string;
+  type: 'forward' | 'recycle' | 'internal';
+  active: boolean;
+}
+
+export interface Alarm {
+  id: string;
+  poolId: string;
+  level: 'warning' | 'danger';
+  message: string;
+  timestamp: Date;
+  acknowledged: boolean;
+}
+
+export interface DataPoint {
+  timestamp: Date;
+  value: number;
+}
