@@ -1,141 +1,120 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Wind } from 'lucide-vue-next';
+import * as echarts from 'echarts';
 
-const canvasRef = ref<HTMLCanvasElement | null>(null);
+const chartRef = ref<HTMLDivElement | null>(null);
+let chartInstance: echarts.ECharts | null = null;
 
-function drawChart() {
-  const canvas = canvasRef.value;
-  if (!canvas) return;
+const data = [
+  { x: 0, y: 15 },
+  { x: 3, y: 25 },
+  { x: 6, y: 45 },
+  { x: 9, y: 70 },
+  { x: 12, y: 90 },
+  { x: 15, y: 65 },
+  { x: 18, y: 40 },
+  { x: 21, y: 20 },
+  { x: 24, y: 10 },
+];
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+function initChart() {
+  if (!chartRef.value) return;
 
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
+  chartInstance = echarts.init(chartRef.value);
 
-  const width = rect.width;
-  const height = rect.height;
-  const padding = { top: 20, right: 10, bottom: 30, left: 40 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(10, 18, 38, 0.9)',
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+      textStyle: { color: '#e2e8f0', fontSize: 12 },
+      axisPointer: {
+        type: 'cross',
+        crossStyle: { color: 'rgba(16, 185, 129, 0.5)' },
+        lineStyle: { color: 'rgba(16, 185, 129, 0.5)' },
+      },
+      formatter: (params: any) => {
+        const item = params[0];
+        return `${item.name}h<br/>浓度: ${item.value} mg/m³`;
+      },
+    },
+    grid: {
+      top: 20,
+      right: 10,
+      bottom: 30,
+      left: 40,
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map((d) => `${d.x}`),
+      axisLine: { lineStyle: { color: 'rgba(30, 58, 95, 0.4)' } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#4a5568',
+        fontSize: 9,
+        interval: (idx: number) => [0, 6, 12, 18, 24].includes(data[idx].x),
+      },
+      splitLine: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      interval: 25,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#4a5568',
+        fontSize: 9,
+      },
+      splitLine: {
+        lineStyle: { color: 'rgba(30, 58, 95, 0.25)', type: 'solid' },
+      },
+    },
+    series: [
+      {
+        type: 'line',
+        data: data.map((d) => d.y),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 4,
+        lineStyle: {
+          color: 'rgba(16, 185, 129, 0.6)',
+          width: 1.5,
+        },
+        itemStyle: {
+          color: 'rgba(16, 185, 129, 0.6)',
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(16, 185, 129, 0.15)' },
+            { offset: 0.5, color: 'rgba(16, 185, 129, 0.05)' },
+            { offset: 1, color: 'rgba(16, 185, 129, 0.01)' },
+          ]),
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(16, 185, 129, 0.5)',
+          },
+        },
+      },
+    ],
+  };
 
-  // Clear
-  ctx.clearRect(0, 0, width, height);
-
-  // Data points (simulated gas concentration curve) - matching reference shape
-  const data = [
-    { x: 0, y: 15 },
-    { x: 3, y: 25 },
-    { x: 6, y: 45 },
-    { x: 9, y: 70 },
-    { x: 12, y: 90 },
-    { x: 15, y: 65 },
-    { x: 18, y: 40 },
-    { x: 21, y: 20 },
-    { x: 24, y: 10 },
-  ];
-
-  // Grid lines - lighter and more subtle
-  ctx.strokeStyle = 'rgba(30, 58, 95, 0.25)';
-  ctx.lineWidth = 1;
-
-  // Horizontal grid lines
-  for (let i = 0; i <= 4; i++) {
-    const y = padding.top + (chartHeight / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(padding.left, y);
-    ctx.lineTo(width - padding.right, y);
-    ctx.stroke();
-
-    // Y axis labels - smaller and muted
-    ctx.fillStyle = '#4a5568';
-    ctx.font = '9px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${100 - i * 25}`, padding.left - 8, y + 3);
-  }
-
-  // X axis labels
-  const xLabels = [0, 6, 12, 18, 24];
-  xLabels.forEach((label) => {
-    const x = padding.left + (label / 24) * chartWidth;
-    ctx.fillStyle = '#4a5568';
-    ctx.font = '9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${label}`, x, height - 12);
-  });
-
-  // Draw smooth area with gradient
-  ctx.beginPath();
-  ctx.moveTo(padding.left, padding.top + chartHeight);
-  
-  // Use quadratic curves for smoother line
-  for (let i = 0; i < data.length; i++) {
-    const point = data[i];
-    const x = padding.left + (point.x / 24) * chartWidth;
-    const y = padding.top + chartHeight - (point.y / 100) * chartHeight;
-    
-    if (i === 0) {
-      ctx.lineTo(x, y);
-    } else {
-      const prevPoint = data[i - 1];
-      const prevX = padding.left + (prevPoint.x / 24) * chartWidth;
-      const prevY = padding.top + chartHeight - (prevPoint.y / 100) * chartHeight;
-      const cpX = (prevX + x) / 2;
-      ctx.quadraticCurveTo(cpX, prevY, cpX, (prevY + y) / 2);
-      ctx.quadraticCurveTo(cpX, y, x, y);
-    }
-  }
-  
-  ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
-  ctx.closePath();
-
-  const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
-  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
-  gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.05)');
-  gradient.addColorStop(1, 'rgba(16, 185, 129, 0.01)');
-  ctx.fillStyle = gradient;
-  ctx.fill();
-
-  // Draw smooth line
-  ctx.beginPath();
-  for (let i = 0; i < data.length; i++) {
-    const point = data[i];
-    const x = padding.left + (point.x / 24) * chartWidth;
-    const y = padding.top + chartHeight - (point.y / 100) * chartHeight;
-    
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      const prevPoint = data[i - 1];
-      const prevX = padding.left + (prevPoint.x / 24) * chartWidth;
-      const prevY = padding.top + chartHeight - (prevPoint.y / 100) * chartHeight;
-      const cpX = (prevX + x) / 2;
-      ctx.quadraticCurveTo(cpX, prevY, cpX, (prevY + y) / 2);
-      ctx.quadraticCurveTo(cpX, y, x, y);
-    }
-  }
-  ctx.strokeStyle = '#10b981';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Draw subtle points
-  data.forEach((point) => {
-    const x = padding.left + (point.x / 24) * chartWidth;
-    const y = padding.top + chartHeight - (point.y / 100) * chartHeight;
-    ctx.beginPath();
-    ctx.arc(x, y, 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#10b981';
-    ctx.fill();
-  });
+  chartInstance.setOption(option);
 }
 
 onMounted(() => {
-  drawChart();
-  window.addEventListener('resize', drawChart);
+  initChart();
+  window.addEventListener('resize', () => chartInstance?.resize());
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', () => chartInstance?.resize());
+  chartInstance?.dispose();
 });
 </script>
 
@@ -147,7 +126,7 @@ onMounted(() => {
     </div>
     <div class="panel-body">
       <div class="y-axis-label">mg/m³</div>
-      <canvas ref="canvasRef" class="chart-canvas"></canvas>
+      <div ref="chartRef" class="chart-container"></div>
     </div>
   </div>
 </template>
@@ -183,13 +162,6 @@ onMounted(() => {
   color: #e2e8f0;
 }
 
-.header-sub {
-  font-size: 10px;
-  color: #64748b;
-  letter-spacing: 1px;
-  margin-left: auto;
-}
-
 .panel-body {
   flex: 1;
   position: relative;
@@ -203,11 +175,12 @@ onMounted(() => {
   left: 8px;
   font-size: 10px;
   color: #64748b;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.chart-canvas {
+.chart-container {
   width: 100%;
   height: 100%;
-  display: block;
 }
 </style>

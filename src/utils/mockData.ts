@@ -181,7 +181,7 @@ export function generateFlowPaths(): FlowPath[] {
     // 回流管线（智能自动选择最优方向）
     { id: 'f-10', from: 'pool-6', to: 'pool-5', type: 'recycle', active: true },
     { id: 'f-11', from: 'pool-7', to: 'pool-4', type: 'recycle', active: true },
-    { id: 'f-12', from: 'pool-9', to: 'pool-3', type: 'recycle', active: true },
+    { id: 'f-12', from: 'pool-9', to: 'pool-3', type: 'recycle', active: true, fromSide: 'top', toSide: 'right' },
   ];
 }
 
