@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref, computed } from 'vue';
 import { useProcessStore } from '@/stores/processStore';
 import HeaderBar from '@/components/HeaderBar.vue';
-import FooterBar from '@/components/FooterBar.vue';
+
 import PoolNode from '@/components/PoolNode.vue';
 import FlowLines from '@/components/FlowLines.vue';
 import PoolDetailModal from '@/components/PoolDetailModal.vue';
@@ -17,6 +17,7 @@ let updateTimer: ReturnType<typeof setInterval>;
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const containerSize = ref({ width: 0, height: 0 });
+const sidebarRef = ref<HTMLElement | null>(null);
 
 // 拓扑图设计尺寸
 const DESIGN_WIDTH = 1200;
@@ -27,18 +28,16 @@ const transformStyle = computed(() => {
   const { width, height } = containerSize.value;
   if (width === 0 || height === 0) return {};
 
-  // 计算缩放比例，保持宽高比，留边距
-  const paddingX = 40;
-  const paddingY = 40;
-  const scaleX = (width - paddingX * 2) / DESIGN_WIDTH;
-  const scaleY = (height - paddingY * 2) / DESIGN_HEIGHT;
-  const scale = Math.min(scaleX, scaleY, 1); // 最大不放大超过100%
+  // 计算缩放比例，填满容器
+  const scaleX = width / DESIGN_WIDTH;
+  const scaleY = height / DESIGN_HEIGHT;
+  const scale = Math.min(scaleX, scaleY);
 
-  // 计算居中偏移
+  // 计算居中偏移，稍微向上移动
   const scaledWidth = DESIGN_WIDTH * scale;
   const scaledHeight = DESIGN_HEIGHT * scale;
   const offsetX = (width - scaledWidth) / 2;
-  const offsetY = (height - scaledHeight) / 2;
+  const offsetY = (height - scaledHeight) / 2 - 20;
 
   return {
     transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
@@ -54,6 +53,15 @@ function updateContainerSize() {
       width: rect.width,
       height: rect.height,
     };
+  }
+  syncSidebarHeight();
+}
+
+function syncSidebarHeight() {
+  if (containerRef.value && sidebarRef.value) {
+    const topologyHeight = containerRef.value.getBoundingClientRect().height;
+    sidebarRef.value.style.height = `${topologyHeight}px`;
+    sidebarRef.value.style.maxHeight = `${topologyHeight}px`;
   }
 }
 
@@ -116,13 +124,11 @@ function handleCloseModal() {
       </div>
 
       <!-- 右侧数据面板 -->
-      <aside class="right-sidebar">
+      <aside ref="sidebarRef" class="right-sidebar">
         <EmissionData />
         <DeviceMonitor />
       </aside>
     </main>
-
-    <FooterBar />
 
     <PoolDetailModal :pool="store.selectedPool" @close="handleCloseModal" />
   </div>
@@ -134,8 +140,12 @@ function handleCloseModal() {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: var(--bg-primary);
+  background: transparent;
   overflow: hidden;
+  --sidebar-width: 330px;
+  --header-h: 56px;
+  --bottom-h: 220px;
+  --main-padding: 16px;
 }
 
 .main-content {
@@ -178,7 +188,7 @@ function handleCloseModal() {
 .bottom-bar {
   display: flex;
   gap: 12px;
-  height: 220px;
+  height: var(--bottom-h);
   flex-shrink: 0;
   width: 100vw;
   margin-left: calc(-1 * var(--main-padding, 16px));
@@ -193,32 +203,30 @@ function handleCloseModal() {
 }
 
 .alarm-section {
-  flex: 6;
+  flex: 5;
 }
 
 .chart-section {
-  flex: 2;
+  flex: 2.5;
+  min-width: 0;
 }
 
 /* 右侧边栏 */
 .right-sidebar {
-  width: 280px;
+  width: var(--sidebar-width, 280px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow-y: auto;
+  overflow: hidden;
   align-self: flex-start;
 }
 
 /* 响应式适配 */
 @media (max-width: 1280px) {
-  .right-sidebar {
-    width: 240px;
-  }
-
-  .bottom-bar {
-    height: 180px;
+  .dashboard {
+    --sidebar-width: 240px;
+    --bottom-h: 180px;
   }
 }
 
