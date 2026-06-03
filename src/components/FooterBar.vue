@@ -59,8 +59,8 @@ function formatUptime(seconds: number): string {
   justify-content: space-between;
   align-items: center;
   padding: 8px 24px;
-  background: linear-gradient(90deg, #0a1628 0%, #0f1d32 50%, #0a1628 100%);
-  border-top: 1px solid #1e3a5f;
+  background: linear-gradient(90deg, rgba(8, 13, 26, 0.95) 0%, rgba(12, 20, 40, 0.9) 50%, rgba(8, 13, 26, 0.95) 100%);
+  border-top: 1px solid rgba(100, 130, 180, 0.2);
   position: relative;
   z-index: 10;
 }

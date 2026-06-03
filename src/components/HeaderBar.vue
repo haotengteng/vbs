@@ -1,20 +1,53 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Activity, AlertTriangle, AlertCircle, Clock } from '@lucide/vue';
+import { Activity, AlertTriangle, AlertCircle, Clock, Maximize, Minimize } from '@lucide/vue';
 import { useProcessStore } from '@/stores/processStore';
 
 const store = useProcessStore();
 const currentTime = ref(new Date());
+const isFullscreen = ref(false);
 let timer: ReturnType<typeof setInterval>;
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.() ||
+      (document.documentElement as any).webkitRequestFullscreen?.() ||
+      (document.documentElement as any).mozRequestFullScreen?.() ||
+      (document.documentElement as any).msRequestFullscreen?.();
+  } else {
+    document.exitFullscreen?.() ||
+      (document as any).webkitExitFullscreen?.() ||
+      (document as any).mozCancelFullScreen?.() ||
+      (document as any).msExitFullscreen?.();
+  }
+}
+
+function onFullscreenChange() {
+  isFullscreen.value = !!(
+    document.fullscreenElement ||
+    (document as any).webkitFullscreenElement ||
+    (document as any).mozFullScreenElement ||
+    (document as any).msFullscreenElement
+  );
+}
 
 onMounted(() => {
   timer = setInterval(() => {
     currentTime.value = new Date();
   }, 1000);
+
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  document.addEventListener('mozfullscreenchange', onFullscreenChange);
+  document.addEventListener('MSFullscreenChange', onFullscreenChange);
 });
 
 onUnmounted(() => {
   clearInterval(timer);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
+  document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+  document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+  document.removeEventListener('MSFullscreenChange', onFullscreenChange);
 });
 
 function formatTime(date: Date): string {
@@ -63,6 +96,16 @@ function formatTime(date: Date): string {
         <Clock :size="16" />
         <span class="font-mono">{{ formatTime(currentTime) }}</span>
       </div>
+
+      <button
+        class="fullscreen-btn"
+        :class="{ active: isFullscreen }"
+        @click="toggleFullscreen"
+        title="全屏展示"
+      >
+        <Maximize v-if="!isFullscreen" :size="18" />
+        <Minimize v-else :size="18" />
+      </button>
     </div>
   </header>
 </template>
@@ -73,8 +116,8 @@ function formatTime(date: Date): string {
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background: linear-gradient(90deg, #0a1628 0%, #0f1d32 50%, #0a1628 100%);
-  border-bottom: 1px solid #1e3a5f;
+  background: linear-gradient(90deg, rgba(8, 13, 26, 0.95) 0%, rgba(12, 20, 40, 0.9) 50%, rgba(8, 13, 26, 0.95) 100%);
+  border-bottom: 1px solid rgba(100, 130, 180, 0.2);
   position: relative;
   z-index: 10;
 }
@@ -203,5 +246,43 @@ function formatTime(date: Date): string {
 
 .time-display svg {
   color: #00d4ff;
+}
+
+.fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(30, 58, 95, 0.3);
+  border: 1px solid rgba(100, 130, 180, 0.25);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.fullscreen-btn:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+}
+
+.fullscreen-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: rgba(0, 212, 255, 0.5);
+  color: #00d4ff;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+.fullscreen-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.fullscreen-btn:hover svg {
+  transform: scale(1.1);
 }
 </style>

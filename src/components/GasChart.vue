@@ -144,7 +144,6 @@ onMounted(() => {
     <div class="panel-header">
       <Wind :size="16" class="header-icon" />
       <span class="header-title">废气浓度</span>
-      <span class="header-sub">GAS CONCENTRATION</span>
     </div>
     <div class="panel-body">
       <div class="y-axis-label">mg/m³</div>
@@ -155,8 +154,8 @@ onMounted(() => {
 
 <style scoped>
 .chart-panel {
-  background: linear-gradient(180deg, rgba(16, 30, 60, 0.9) 0%, rgba(10, 22, 40, 0.95) 100%);
-  border: 1px solid rgba(30, 58, 95, 0.6);
+  background: linear-gradient(180deg, rgba(16, 28, 55, 0.75) 0%, rgba(10, 18, 38, 0.85) 100%);
+  border: 1px solid rgba(100, 130, 180, 0.2);
   border-radius: 8px;
   overflow: hidden;
   height: 100%;

@@ -25,7 +25,6 @@ const monitorData = ref<MonitorItem[]>([
     <div class="panel-header">
       <Settings :size="16" class="header-icon" />
       <span class="header-title">设备监控</span>
-      <span class="header-sub">EQUIPMENT MONITORING</span>
     </div>
     <div class="panel-body">
       <div
@@ -53,10 +52,14 @@ const monitorData = ref<MonitorItem[]>([
 
 <style scoped>
 .monitor-panel {
-  background: linear-gradient(180deg, rgba(16, 30, 60, 0.9) 0%, rgba(10, 22, 40, 0.95) 100%);
-  border: 1px solid rgba(30, 58, 95, 0.6);
+  background: linear-gradient(180deg, rgba(16, 28, 55, 0.75) 0%, rgba(10, 18, 38, 0.85) 100%);
+  border: 1px solid rgba(100, 130, 180, 0.2);
   border-radius: 8px;
   overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .panel-header {
@@ -90,6 +93,9 @@ const monitorData = ref<MonitorItem[]>([
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
   padding: 14px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .monitor-item {
