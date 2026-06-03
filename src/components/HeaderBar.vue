@@ -69,7 +69,7 @@ function formatTime(date: Date): string {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="logo-icon">
               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
             </svg>
-        <h1 class="title font-display">工业污水监控大屏系统</h1>
+        <h1 class="title font-display">嘉然污水监控系统</h1>
       </div>
     </div>
 
