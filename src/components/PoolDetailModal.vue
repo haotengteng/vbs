@@ -195,7 +195,7 @@ function formatRuntime(minutes: number): string {
 .pool-code {
   font-family: 'Roboto Mono', monospace;
   font-size: 12px;
-  color: #64748b;
+  color: #a0beeb;
   background: rgba(30, 58, 95, 0.5);
   padding: 4px 8px;
   border-radius: 4px;
@@ -219,7 +219,7 @@ function formatRuntime(minutes: number): string {
 .close-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: #a0beeb;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -247,7 +247,7 @@ function formatRuntime(minutes: number): string {
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #a0beeb;
   margin-bottom: 12px;
 }
 
@@ -268,7 +268,7 @@ function formatRuntime(minutes: number): string {
 
 .param-label {
   font-size: 11px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .param-value {
@@ -295,7 +295,7 @@ function formatRuntime(minutes: number): string {
 
 .param-item-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: #a0beeb;
 }
 
 .param-item-value {
@@ -332,7 +332,7 @@ function formatRuntime(minutes: number): string {
 
 .device-type {
   font-size: 11px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .device-status {
@@ -370,7 +370,7 @@ function formatRuntime(minutes: number): string {
 
 .runtime {
   font-size: 11px;
-  color: #64748b;
+  color: #a0beeb;
   font-family: 'Roboto Mono', monospace;
 }
 

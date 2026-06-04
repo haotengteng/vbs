@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { Server } from 'lucide-vue-next';
+import PanelTitle from './PanelTitle.vue';
 import * as echarts from 'echarts';
 
 interface DeviceCategory {
@@ -214,10 +214,7 @@ onUnmounted(() => {
 <template>
   <div class="emission-panel">
     <!-- 设备状态 -->
-    <div class="section-header">
-      <Server :size="14" class="header-icon" />
-      <span class="header-title">设备状态</span>
-    </div>
+    <PanelTitle title="设备状态" subtitle="STATUS" />
 
     <div class="device-status">
       <div class="status-card">
@@ -254,9 +251,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 设备统计 -->
-    <div class="section-header">
-      <span class="header-title">设备统计</span>
-    </div>
+    <PanelTitle title="设备统计" subtitle="STATISTICS" />
 
     <div class="device-stats">
       <!-- 左侧分类 -->
@@ -320,25 +315,6 @@ onUnmounted(() => {
   gap: 0;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, rgba(0, 102, 204, 0.15) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(30, 58, 95, 0.4);
-}
-
-.header-icon {
-  color: #00d4ff;
-}
-
-.header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
 /* 设备状态 */
 .device-status {
   display: flex;
@@ -395,7 +371,7 @@ onUnmounted(() => {
 
 .status-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: #a0beeb;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -466,12 +442,12 @@ onUnmounted(() => {
 
 .stat-value .unit {
   font-size: 11px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .stat-name {
   font-size: 12px;
-  color: #94a3b8;
+  color: #a0beeb;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -517,7 +493,7 @@ onUnmounted(() => {
 
 .center-label {
   font-size: 11px;
-  color: #64748b;
+  color: #a0beeb;
   margin-top: 2px;
 }
 </style>

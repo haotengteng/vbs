@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Gauge, Activity, Droplets, Settings } from 'lucide-vue-next';
+import PanelTitle from './PanelTitle.vue';
 
 interface MonitorItem {
   label: string;
@@ -22,10 +23,7 @@ const monitorData = ref<MonitorItem[]>([
 
 <template>
   <div class="monitor-panel">
-    <div class="panel-header">
-      <Settings :size="16" class="header-icon" />
-      <span class="header-title">设备监控</span>
-    </div>
+    <PanelTitle title="设备监控" subtitle="MONITOR" />
     <div class="panel-body">
       <div
         v-for="(item, index) in monitorData"
@@ -60,32 +58,6 @@ const monitorData = ref<MonitorItem[]>([
   display: flex;
   flex-direction: column;
   min-height: 0;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, rgba(0, 102, 204, 0.15) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(30, 58, 95, 0.4);
-}
-
-.header-icon {
-  color: #00d4ff;
-}
-
-.header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.header-sub {
-  font-size: 10px;
-  color: #64748b;
-  letter-spacing: 1px;
-  margin-left: auto;
 }
 
 .panel-body {
@@ -123,7 +95,7 @@ const monitorData = ref<MonitorItem[]>([
 
 .item-label {
   font-size: 11px;
-  color: #94a3b8;
+  color: #a0beeb;
 }
 
 .item-value {
@@ -140,7 +112,7 @@ const monitorData = ref<MonitorItem[]>([
 
 .value-unit {
   font-size: 10px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .status-normal .value-num {

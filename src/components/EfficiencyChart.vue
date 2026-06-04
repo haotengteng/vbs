@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Zap } from 'lucide-vue-next';
+import PanelTitle from './PanelTitle.vue';
 import * as echarts from 'echarts';
 
 const chartRef = ref<HTMLDivElement | null>(null);
@@ -120,10 +120,7 @@ onUnmounted(() => {
 
 <template>
   <div class="chart-panel">
-    <div class="panel-header">
-      <Zap :size="16" class="header-icon" />
-      <span class="header-title">设备能效</span>
-    </div>
+    <PanelTitle title="设备能效" subtitle="EFFICIENCY" />
     <div class="panel-body">
       <div class="y-axis-label">效率 %</div>
       <div ref="chartRef" class="chart-container"></div>
@@ -142,26 +139,6 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, rgba(0, 102, 204, 0.15) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(30, 58, 95, 0.4);
-  flex-shrink: 0;
-}
-
-.header-icon {
-  color: #00d4ff;
-}
-
-.header-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
 .panel-body {
   flex: 1;
   position: relative;
@@ -174,7 +151,7 @@ onUnmounted(() => {
   top: 8px;
   left: 8px;
   font-size: 10px;
-  color: #64748b;
+  color: #a0beeb;
   z-index: 1;
   pointer-events: none;
 }

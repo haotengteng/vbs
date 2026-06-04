@@ -69,7 +69,7 @@ function formatTime(date: Date): string {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="logo-icon">
               <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
             </svg>
-        <h1 class="title font-display">嘉然污水监控系统</h1>
+        <h1 class="title font-display">监控系统</h1>
       </div>
     </div>
 
@@ -197,7 +197,7 @@ function formatTime(date: Date): string {
 
 .status-text {
   font-size: 13px;
-  color: #94a3b8;
+  color: #a0beeb;
 }
 
 .header-right {
@@ -240,7 +240,7 @@ function formatTime(date: Date): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #94a3b8;
+  color: #a0beeb;
   font-size: 13px;
 }
 

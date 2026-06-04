@@ -88,7 +88,7 @@ function formatUptime(seconds: number): string {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .network-icon {
@@ -108,7 +108,7 @@ function formatUptime(seconds: number): string {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .server-status svg {
@@ -120,7 +120,7 @@ function formatUptime(seconds: number): string {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: #a0beeb;
 }
 
 .uptime svg {

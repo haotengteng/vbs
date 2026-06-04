@@ -11,9 +11,9 @@
   --warning: #f59e0b;
   --danger: #ef4444;
   --success: #10b981;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: rgba(179, 209, 255, 1);
+  --text-secondary: rgba(179, 209, 255, 0.7);
+  --text-muted: rgba(179, 209, 255, 0.5);
 
   --font-display: 'Orbitron', sans-serif;
   --font-mono: 'Roboto Mono', monospace;
@@ -38,6 +38,7 @@ body {
               radial-gradient(ellipse at 70% 80%, rgba(15, 25, 55, 0.5) 0%, transparent 50%),
               linear-gradient(180deg, #0a1120 0%, #060a14 40%, #040610 100%);
   color: var(--text-primary);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
