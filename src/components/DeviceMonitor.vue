@@ -12,12 +12,12 @@ interface MonitorItem {
 }
 
 const monitorData = ref<MonitorItem[]>([
-  { label: '烟囱压力', value: '1.08', unit: 'MPa', status: 'normal', icon: 'gauge' },
-  { label: '过滤器压力', value: '0.6', unit: 'MPa', status: 'normal', icon: 'activity' },
-  { label: '吸附塔压力', value: '0.3', unit: 'MPa', status: 'normal', icon: 'droplets' },
+  { label: '膜池液位', value: '1.08', unit: 'm', status: 'normal', icon: 'gauge' },
+  { label: '膜池流量', value: '0.6', unit: 'm³/h', status: 'normal', icon: 'activity' },
+  { label: '酸碱度', value: '7.2', unit: 'pH', status: 'normal', icon: 'droplets' },
   { label: '风机状态', value: '正常', unit: '', status: 'normal', icon: 'gauge' },
-  { label: '清洗系统', value: '正常', unit: '', status: 'normal', icon: 'activity' },
-  { label: '控制系统', value: '正常', unit: '', status: 'normal', icon: 'settings' },
+  { label: '循环泵', value: '正常', unit: '', status: 'normal', icon: 'activity' },
+  { label: '回流泵', value: '正常', unit: '', status: 'normal', icon: 'settings' },
 ]);
 </script>
 
@@ -100,8 +100,10 @@ const monitorData = ref<MonitorItem[]>([
 
 .item-value {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
+  width: 100%;
 }
 
 .value-num {

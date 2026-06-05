@@ -13,10 +13,10 @@ const runningDevices = ref(27);
 const faultDevices = ref(2);
 
 const deviceCategories = ref<DeviceCategory[]>([
-  { name: '泵站', value: 9, color: '#00d4ff' },
-  { name: '搅拌器', value: 12, color: '#00ccff' },
-  { name: '曝气池', value: 4, color: '#0099ff' },
-  { name: '沉淀池', value: 5, color: '#0066cc' },
+  { name: '缺氧池', value: 9, color: '#00d4ff' },
+  { name: '调节池', value: 12, color: '#00ccff' },
+  { name: '厌氧池', value: 4, color: '#0099ff' },
+  { name: '膜池', value: 5, color: '#0066cc' },
 ]);
 
 const totalDevices = computed(() =>

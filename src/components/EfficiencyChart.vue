@@ -36,7 +36,7 @@ function initChart() {
       },
       formatter: (params: any) => {
         const item = params[0];
-        return `${item.name}h<br/>效率: ${item.value}%`;
+        return `${item.name}h<br/>入口流量: ${item.value} m³/h`;
       },
     },
     grid: {
@@ -120,9 +120,9 @@ onUnmounted(() => {
 
 <template>
   <div class="chart-panel">
-    <PanelTitle title="设备能效" subtitle="EFFICIENCY" />
+    <PanelTitle title="入口流量" subtitle="INFLOW" />
     <div class="panel-body">
-      <div class="y-axis-label">效率 %</div>
+      <div class="y-axis-label">流量 m³/h</div>
       <div ref="chartRef" class="chart-container"></div>
     </div>
   </div>

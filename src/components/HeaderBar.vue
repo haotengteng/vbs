@@ -66,10 +66,12 @@ function formatTime(date: Date): string {
   <header class="header-bar">
     <div class="header-left">
       <div class="logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="logo-icon">
-              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-            </svg>
-        <h1 class="title font-display">监控系统</h1>
+        <div class="logo-img-wrapper">
+          <img src="/logo.png" alt="污水净化监控平台" class="logo-img" />
+        </div>
+        <div class="logo-text">
+          <h1 class="title font-display">污水净化监控平台</h1>
+        </div>
       </div>
     </div>
 
@@ -139,25 +141,56 @@ function formatTime(date: Date): string {
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  color: #00d4ff;
+.logo-img-wrapper {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: radial-gradient(circle at 30% 30%, rgba(0, 212, 255, 0.15), rgba(0, 150, 200, 0.08) 60%, transparent 100%);
+  transition: all 0.3s ease;
+}
+
+.logo-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: brightness(1.15) contrast(1.1) drop-shadow(0 0 6px rgba(0, 212, 255, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.logo-img-wrapper:hover .logo-img {
+  filter: brightness(1.25) contrast(1.15) drop-shadow(0 0 10px rgba(0, 212, 255, 0.6));
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #e2e8f0;
-  letter-spacing: 2px;
+  font-family: 'DOUYU Font', 'Noto Sans SC', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 4px;
   margin: 0;
-  background: linear-gradient(90deg, #00d4ff, #00ccff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.title-en {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(148, 163, 184, 0.6);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .header-center {

@@ -36,7 +36,7 @@ function initChart() {
       },
       formatter: (params: any) => {
         const item = params[0];
-        return `${item.name}h<br/>浓度: ${item.value} mg/m³`;
+        return `${item.name}h<br/>出口流量: ${item.value} m³/h`;
       },
     },
     grid: {
@@ -120,9 +120,9 @@ onUnmounted(() => {
 
 <template>
   <div class="chart-panel">
-    <PanelTitle title="废气浓度" subtitle="CONCENTRATION" />
+    <PanelTitle title="出口流量" subtitle="OUTFLOW" />
     <div class="panel-body">
-      <div class="y-axis-label">mg/m³</div>
+      <div class="y-axis-label">流量 m³/h</div>
       <div ref="chartRef" class="chart-container"></div>
     </div>
   </div>

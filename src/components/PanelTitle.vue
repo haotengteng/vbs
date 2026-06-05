@@ -50,6 +50,7 @@ defineProps<Props>();
   border-radius: 24px 8px 8px 24px;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 /* 胶囊底部高光 */
@@ -128,6 +129,10 @@ defineProps<Props>();
   text-shadow: 0 0 12px rgba(0, 212, 255, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   z-index: 1;
   white-space: nowrap;
+}
+
+.title-text:hover {
+  color: rgba(6, 17, 59, 1);
 }
 
 /* 副标题 */
