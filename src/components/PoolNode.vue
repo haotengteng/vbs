@@ -62,8 +62,8 @@ function handleClick() {
         :current-level="pool.currentLevel"
         :max-level="pool.maxLevel"
         :warning-level="pool.warningLevel"
-        :width="100"
-        :height="60"
+        :width="120"
+        :height="85"
       />
 
       <div class="pool-data">

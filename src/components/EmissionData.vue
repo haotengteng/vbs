@@ -291,8 +291,8 @@ onUnmounted(() => {
           :style="{ '--item-color': item.color }"
         >
           <div class="stat-value">
-            <span class="unit">台</span>
             <span class="num">{{ item.value }}</span>
+            <span class="unit">台</span>
           </div>
           <div class="stat-name">
             {{ item.name }}
