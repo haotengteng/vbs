@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { PoolData } from '@/types';
-import { X, Activity, Droplets, Settings, AlertTriangle } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import type { PoolData, ParameterHistory } from '@/types';
+import { useProcessStore } from '@/stores/processStore';
+import ParamHistoryChart from './ParamHistoryChart.vue';
+import { X, Activity, Droplets, Settings, Database, Gauge } from '@lucide/vue';
 
 interface Props {
   pool: PoolData | null;
@@ -11,6 +13,10 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   close: [];
 }>();
+
+const store = useProcessStore();
+const selectedParam = ref<ParameterHistory | null>(null);
+const activeParamId = ref<string | null>(null);
 
 const isOpen = computed(() => props.pool !== null);
 
@@ -38,6 +44,56 @@ const statusColor = computed(() => {
   }
 });
 
+// 静态配置参数
+const staticParams = computed(() => {
+  if (!props.pool) return [];
+  return [
+    { label: '总容量', value: `${props.pool.capacity}m³`, icon: Database },
+    { label: '最大水位', value: `${props.pool.maxLevel}m`, icon: Droplets },
+    { label: '高液位警戒', value: `${props.pool.warningLevel}m`, color: '#f59e0b' },
+    { label: '低液位警戒', value: `${props.pool.lowWarningLevel}m`, color: '#ef4444' },
+  ];
+});
+
+// 实时参数（包含水位和其他动态参数）
+const realtimeParams = computed(() => {
+  if (!props.pool) return [];
+  const params = [
+    {
+      id: 'level',
+      name: '当前水位',
+      value: props.pool.currentLevel,
+      unit: 'm',
+      color: statusColor.value,
+      chartable: true,
+    },
+    {
+      id: 'level-percent',
+      name: '水位占比',
+      value: parseFloat(((props.pool.currentLevel / props.pool.maxLevel) * 100).toFixed(1)),
+      unit: '%',
+      color: statusColor.value,
+      chartable: false,
+    },
+  ];
+
+  // 添加其他动态参数
+  props.pool.parameters.forEach((param) => {
+    if (param.name !== '液位') {
+      params.push({
+        id: param.id,
+        name: param.name,
+        value: param.value,
+        unit: param.unit,
+        color: undefined,
+        chartable: true,
+      });
+    }
+  });
+
+  return params;
+});
+
 function close() {
   emit('close');
 }
@@ -46,6 +102,30 @@ function formatRuntime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h ${mins}m`;
+}
+
+function toggleParamHistory(paramId: string, paramName: string, unit: string) {
+  if (!props.pool) return;
+  
+  // 如果点击的是当前已展开的参数，则关闭
+  if (activeParamId.value === paramId) {
+    activeParamId.value = null;
+    selectedParam.value = null;
+    return;
+  }
+  
+  activeParamId.value = paramId;
+  const history = store.getParamHistory(props.pool.id, paramId);
+  if (history && history.data.length > 0) {
+    selectedParam.value = history;
+  } else {
+    selectedParam.value = {
+      paramId,
+      paramName,
+      unit,
+      data: [],
+    };
+  }
 }
 </script>
 
@@ -67,58 +147,54 @@ function formatRuntime(minutes: number): string {
         </div>
 
         <div class="modal-body">
+          <!-- 静态配置 -->
           <div class="section">
             <h3 class="section-title">
-              <Droplets :size="16" />
-              实时参数
+              <Database :size="16" />
+              静态配置
             </h3>
-            <div class="params-grid">
-              <div class="param-card">
-                <span class="param-label">当前水位</span>
-                <span class="param-value font-mono" :style="{ color: statusColor }">
-                  {{ pool?.currentLevel.toFixed(2) }}m
-                </span>
-              </div>
-              <div class="param-card">
-                <span class="param-label">总容量</span>
-                <span class="param-value font-mono">{{ pool?.capacity }}m³</span>
-              </div>
-              <div class="param-card">
-                <span class="param-label">警戒水位</span>
-                <span class="param-value font-mono" style="color: #f59e0b">
-                  {{ pool?.warningLevel }}m
-                </span>
-              </div>
-              <div class="param-card">
-                <span class="param-label">实时流量</span>
-                <span class="param-value font-mono">{{ pool?.flowRate.toFixed(0) }}m³/h</span>
-              </div>
-              <div class="param-card">
-                <span class="param-label">最大水位</span>
-                <span class="param-value font-mono">{{ pool?.maxLevel }}m</span>
-              </div>
-              <div class="param-card">
-                <span class="param-label">水位占比</span>
-                <span class="param-value font-mono" :style="{ color: statusColor }">
-                  {{ pool ? ((pool.currentLevel / pool.maxLevel) * 100).toFixed(1) : 0 }}%
-                </span>
-              </div>
-            </div>
-
-            <div v-if="pool?.parameters && pool.parameters.length > 4" class="extra-params">
-              <div
-                v-for="param in pool.parameters.filter(p => p.name !== '液位')"
-                :key="param.id"
-                class="param-item"
-              >
-                <span class="param-item-label">{{ param.name }}</span>
-                <span class="param-item-value font-mono">
-                  {{ param.value.toFixed(2) }}{{ param.unit }}
+            <div class="static-grid">
+              <div v-for="param in staticParams" :key="param.label" class="static-card">
+                <span class="static-label">{{ param.label }}</span>
+                <span class="static-value font-mono" :style="{ color: param.color || '#e2e8f0' }">
+                  {{ param.value }}
                 </span>
               </div>
             </div>
           </div>
 
+          <!-- 实时参数 -->
+          <div class="section">
+            <h3 class="section-title">
+              <Gauge :size="16" />
+              实时参数
+              <span class="hint">点击参数查看历史趋势</span>
+            </h3>
+            <div class="realtime-grid">
+              <template v-for="param in realtimeParams" :key="param.id">
+                <div
+                  class="realtime-card"
+                  :class="{ active: activeParamId === param.id, 'no-chart': !param.chartable }"
+                  @click="param.chartable && toggleParamHistory(param.id, param.name, param.unit)"
+                >
+                  <div class="realtime-header">
+                    <span class="realtime-name">{{ param.name }}</span>
+                    <Activity v-if="param.chartable" :size="14" class="chart-icon" />
+                  </div>
+                  <span class="realtime-value font-mono" :style="{ color: param.color || '#00d4ff' }">
+                    {{ param.value.toFixed(2) }}{{ param.unit }}
+                  </span>
+                </div>
+              </template>
+            </div>
+            <!-- 统一在实时参数栏目下方展示折线图 -->
+            <ParamHistoryChart
+              v-if="selectedParam && activeParamId"
+              :history="selectedParam"
+            />
+          </div>
+
+          <!-- 设备状态 -->
           <div class="section">
             <h3 class="section-title">
               <Settings :size="16" />
@@ -135,11 +211,20 @@ function formatRuntime(minutes: number): string {
                   <span class="device-type">{{ device.type }}</span>
                 </div>
                 <div class="device-status">
+                  <label class="device-switch" :class="{ disabled: device.status === 'fault' }">
+                    <input
+                      type="checkbox"
+                      :checked="device.status === 'running'"
+                      :disabled="device.status === 'fault'"
+                      @change="store.toggleDeviceStatus(pool!.id, device.id)"
+                    />
+                    <span class="switch-slider"></span>
+                  </label>
                   <span
                     class="status-tag"
                     :class="device.status"
                   >
-                    {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : device.status === 'fault' ? '故障' : '维护' }}
+                    {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : '故障' }}
                   </span>
                   <span class="runtime">{{ formatRuntime(device.runtime) }}</span>
                 </div>
@@ -150,6 +235,8 @@ function formatRuntime(minutes: number): string {
       </div>
     </div>
   </Transition>
+
+
 </template>
 
 <style scoped>
@@ -251,14 +338,22 @@ function formatRuntime(minutes: number): string {
   margin-bottom: 12px;
 }
 
-.params-grid {
+.hint {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 400;
+  margin-left: auto;
+}
+
+/* 静态配置 */
+.static-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
-.param-card {
-  background: rgba(30, 58, 95, 0.3);
+.static-card {
+  background: rgba(30, 58, 95, 0.2);
   border-radius: 8px;
   padding: 12px;
   display: flex;
@@ -266,43 +361,84 @@ function formatRuntime(minutes: number): string {
   gap: 4px;
 }
 
-.param-label {
+.static-label {
   font-size: 11px;
-  color: #a0beeb;
+  color: #64748b;
 }
 
-.param-value {
-  font-size: 16px;
+.static-value {
+  font-size: 14px;
   font-weight: 600;
   color: #e2e8f0;
 }
 
-.extra-params {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* 实时参数 */
+.realtime-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: start;
 }
 
-.param-item {
+.realtime-card {
+  background: rgba(30, 58, 95, 0.3);
+  border: 1px solid rgba(30, 58, 95, 0.5);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.realtime-card:hover {
+  background: rgba(30, 58, 95, 0.5);
+  border-color: rgba(0, 212, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.realtime-card.active {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+.realtime-card.no-chart {
+  cursor: default;
+}
+
+.realtime-card.no-chart:hover {
+  background: rgba(30, 58, 95, 0.3);
+  border-color: rgba(30, 58, 95, 0.5);
+  transform: none;
+}
+
+.realtime-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: rgba(30, 58, 95, 0.2);
-  border-radius: 6px;
 }
 
-.param-item-label {
-  font-size: 12px;
+.realtime-name {
+  font-size: 11px;
   color: #a0beeb;
 }
 
-.param-item-value {
-  font-size: 13px;
-  color: #e2e8f0;
+.chart-icon {
+  color: #64748b;
+  transition: color 0.2s;
 }
 
+.realtime-card:hover .chart-icon {
+  color: #00d4ff;
+}
+
+.realtime-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 设备状态 */
 .devices-list {
   display: flex;
   flex-direction: column;
@@ -363,15 +499,67 @@ function formatRuntime(minutes: number): string {
   color: #ef4444;
 }
 
-.status-tag.maintenance {
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-}
-
 .runtime {
   font-size: 11px;
   color: #a0beeb;
   font-family: 'Roboto Mono', monospace;
+}
+
+/* 设备开关 */
+.device-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.device-switch.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.device-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 20px;
+  transition: background 0.3s;
+}
+
+.switch-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.device-switch input:checked + .switch-slider {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.device-switch input:checked + .switch-slider::before {
+  transform: translateX(16px);
+  background: #10b981;
+}
+
+.device-switch input:focus + .switch-slider {
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3);
 }
 
 .modal-enter-active,

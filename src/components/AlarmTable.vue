@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { useProcessStore } from '@/stores/processStore';
 import PanelTitle from './PanelTitle.vue';
 
-interface AlarmItem {
-  id: number;
-  time: string;
-  device: string;
-  event: string;
-  status: 'processing' | 'completed' | 'pending';
+const store = useProcessStore();
+
+const alarmList = computed(() => {
+  return store.activeAlarms.slice(0, 8).map((alarm, index) => ({
+    id: index + 1,
+    time: formatTime(alarm.timestamp),
+    device: getDeviceName(alarm.message),
+    event: alarm.message,
+    status: alarm.level === 'danger' ? 'pending' : 'processing' as const,
+  }));
+});
+
+function formatTime(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes}分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}小时前`;
+  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-');
 }
 
-const alarms = ref<AlarmItem[]>([
-  { id: 1, time: '2023-06-17 13:50', device: '#01循环泵', event: '循环泵电流异常，超限值500', status: 'processing' },
-  { id: 2, time: '2023-06-17 13:50', device: 'UV光解', event: 'UV光解告警灯持续闪烁', status: 'completed' },
-  { id: 3, time: '2023-06-17 13:50', device: '#02循环泵', event: '循环泵电流异常，超限值106', status: 'pending' },
-  { id: 4, time: '2023-06-17 13:50', device: '#04循环泵', event: '循环泵电流异常，超限值806', status: 'completed' },
-  { id: 5, time: '2023-06-17 13:50', device: '#02收集风机', event: '收集风机电流异常，超限值640', status: 'processing' },
-]);
+function getDeviceName(message: string): string {
+  // 从告警消息中提取设备/池名称
+  const match = message.match(/^([^\s]+)/);
+  return match ? match[1] : '未知设备';
+}
 
 function getStatusText(status: string): string {
   const map: Record<string, string> = {
@@ -36,18 +50,18 @@ function getStatusClass(status: string): string {
   <div class="alarm-panel">
     <PanelTitle title="报警信息" subtitle="ALARM" />
     <div class="panel-body">
-      <table class="alarm-table">
+      <table v-if="alarmList.length > 0" class="alarm-table">
         <thead>
           <tr>
             <th style="width: 40px">序号</th>
-            <th style="width: 140px">时间</th>
+            <th style="width: 100px">时间</th>
             <th style="width: 100px">报警设备</th>
             <th>报警事件</th>
             <th style="width: 80px">处理状态</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="alarm in alarms" :key="alarm.id">
+          <tr v-for="alarm in alarmList" :key="alarm.id">
             <td>{{ alarm.id }}</td>
             <td>{{ alarm.time }}</td>
             <td>{{ alarm.device }}</td>
@@ -60,6 +74,13 @@ function getStatusClass(status: string): string {
           </tr>
         </tbody>
       </table>
+      <div v-else class="no-alarm">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#4a6fa5" stroke-width="1.5">
+          <path d="M9 12l2 2 4-4"/>
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+        <p>系统运行正常，暂无告警</p>
+      </div>
     </div>
   </div>
 </template>
@@ -135,5 +156,20 @@ function getStatusClass(status: string): string {
 .status-pending {
   background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
+}
+
+.no-alarm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #4a6fa5;
+  gap: 8px;
+}
+
+.no-alarm p {
+  font-size: 12px;
+  margin: 0;
 }
 </style>

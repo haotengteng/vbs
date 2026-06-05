@@ -61,12 +61,15 @@ function handleClick() {
       <WaterLevel
         :current-level="pool.currentLevel"
         :max-level="pool.maxLevel"
-        :warning-level="pool.warningLevel"
         :width="120"
         :height="85"
       />
 
       <div class="pool-data">
+        <div class="data-row">
+          <span class="data-label">高液位</span>
+          <span class="data-value font-mono" style="color: #f59e0b">{{ (pool.maxLevel * 0.7).toFixed(1) }}m</span>
+        </div>
         <div class="data-row">
           <span class="data-label">水位</span>
           <span class="data-value font-mono" :style="{ color: statusColor }">
@@ -76,14 +79,6 @@ function handleClick() {
         <div class="data-row">
           <span class="data-label">容量</span>
           <span class="data-value font-mono">{{ pool.capacity }}m³</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">警戒</span>
-          <span class="data-value font-mono" style="color: #f59e0b">{{ pool.warningLevel }}m</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">流量</span>
-          <span class="data-value font-mono">{{ pool.flowRate.toFixed(0) }}m³/h</span>
         </div>
       </div>
     </div>
@@ -98,7 +93,7 @@ function handleClick() {
 <style scoped>
 .pool-node {
   position: absolute;
-  width: 180px;
+  width: 200px;
   background: linear-gradient(135deg, #132238 0%, #0f1d32 100%);
   border: 2px solid #1e3a5f;
   border-radius: 12px;

@@ -4,14 +4,23 @@ import { computed } from 'vue';
 interface Props {
   currentLevel: number;
   maxLevel: number;
-  warningLevel: number;
   width?: number;
   height?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   width: 120,
-  height: 80,
+  height: 85,
+});
+
+// 高液位阈值：最大水位的70%，保留1位有效数字
+const warningLevel = computed(() => {
+  return parseFloat((props.maxLevel * 0.7).toFixed(1));
+});
+
+// 低液位阈值：最大水位的20%，保留1位有效数字
+const lowWarningLevel = computed(() => {
+  return parseFloat((props.maxLevel * 0.2).toFixed(1));
 });
 
 const fillPercentage = computed(() => {
@@ -20,11 +29,19 @@ const fillPercentage = computed(() => {
 });
 
 const warningPercentage = computed(() => {
-  return (props.warningLevel / props.maxLevel) * 100;
+  return (warningLevel.value / props.maxLevel) * 100;
+});
+
+const lowWarningPercentage = computed(() => {
+  return (lowWarningLevel.value / props.maxLevel) * 100;
 });
 
 const isWarning = computed(() => {
-  return props.currentLevel >= props.warningLevel;
+  return props.currentLevel >= warningLevel.value;
+});
+
+const isLowWarning = computed(() => {
+  return props.currentLevel <= lowWarningLevel.value;
 });
 </script>
 
@@ -40,6 +57,10 @@ const isWarning = computed(() => {
           <stop offset="0%" stop-color="#ffaa00" stop-opacity="0.9" />
           <stop offset="100%" stop-color="#cc6600" stop-opacity="0.95" />
         </linearGradient>
+        <linearGradient id="waterLowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ff4444" stop-opacity="0.9" />
+          <stop offset="100%" stop-color="#cc0000" stop-opacity="0.95" />
+        </linearGradient>
         <clipPath id="tankClip">
           <rect x="2" y="2" :width="width - 4" :height="height - 4" rx="6" />
         </clipPath>
@@ -50,10 +71,18 @@ const isWarning = computed(() => {
       <g clip-path="url(#tankClip)">
         <rect x="0" y="0" :width="width" :height="height" fill="#0a1628" />
 
+        <!-- 高液位警示线 -->
         <line
           :x1="0" :y1="height - (height * warningPercentage / 100)"
           :x2="width" :y2="height - (height * warningPercentage / 100)"
-          stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 2" opacity="0.6"
+          stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.8"
+        />
+
+        <!-- 低液位警示线 -->
+        <line
+          :x1="0" :y1="height - (height * lowWarningPercentage / 100)"
+          :x2="width" :y2="height - (height * lowWarningPercentage / 100)"
+          stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.8"
         />
 
         <rect
@@ -61,13 +90,13 @@ const isWarning = computed(() => {
           :y="height - (height * fillPercentage / 100)"
           :width="width"
           :height="height * fillPercentage / 100"
-          :fill="isWarning ? 'url(#waterWarningGradient)' : 'url(#waterGradient)'"
+          :fill="isWarning ? 'url(#waterWarningGradient)' : isLowWarning ? 'url(#waterLowGradient)' : 'url(#waterGradient)'"
           class="water-fill"
         />
 
         <path
           :d="`M0,${height - (height * fillPercentage / 100)} Q${width/4},${height - (height * fillPercentage / 100) - 4} ${width/2},${height - (height * fillPercentage / 100)} Q${width*3/4},${height - (height * fillPercentage / 100) + 4} ${width},${height - (height * fillPercentage / 100)}`"
-          :fill="isWarning ? '#ffaa00' : '#00ccff'"
+          :fill="isWarning ? '#ffaa00' : isLowWarning ? '#ff4444' : '#00ccff'"
           opacity="0.7"
           class="wave-animation"
         />

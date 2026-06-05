@@ -8,30 +8,30 @@ const poolConfigs: {
   capacity: number;
   maxLevel: number;
   warningLevel: number;
+  lowWarningLevel: number;
   position: { x: number; y: number };
 }[] = [
   // 第一行：预处理
-  { id: 'pool-1', code: 'P-001', name: '集水池', type: 'collection', capacity: 800, maxLevel: 5.0, warningLevel: 4.5, position: { x: 80, y: 80 } },
-  { id: 'pool-2', code: 'P-002', name: '格栅渠', type: 'grating', capacity: 200, maxLevel: 2.5, warningLevel: 2.2, position: { x: 340, y: 80 } },
-  { id: 'pool-3', code: 'P-003', name: '调节池', type: 'regulation', capacity: 1200, maxLevel: 6.0, warningLevel: 5.5, position: { x: 600, y: 80 } },
+  { id: 'pool-1', code: 'P-001', name: '集水池', type: 'collection', capacity: 800, maxLevel: 5.0, warningLevel: 4.5, lowWarningLevel: 0.5, position: { x: 80, y: 80 } },
+  { id: 'pool-2', code: 'P-002', name: '格栅渠', type: 'grating', capacity: 200, maxLevel: 2.5, warningLevel: 2.2, lowWarningLevel: 0.5, position: { x: 340, y: 80 } },
+  { id: 'pool-3', code: 'P-003', name: '调节池', type: 'regulation', capacity: 1200, maxLevel: 6.0, warningLevel: 5.5, lowWarningLevel: 0.5, position: { x: 600, y: 80 } },
   // 第二行：生化处理
-  { id: 'pool-5', code: 'P-005', name: '缺氧池', type: 'anoxic', capacity: 500, maxLevel: 4.0, warningLevel: 3.6, position: { x: 340, y: 300 } },
-  { id: 'pool-4', code: 'P-004', name: '厌氧池', type: 'anaerobic', capacity: 600, maxLevel: 4.5, warningLevel: 4.0, position: { x: 600, y: 300 } },
-  { id: 'pool-9', code: 'P-009', name: '污泥浓缩池', type: 'sludge', capacity: 250, maxLevel: 3.5, warningLevel: 3.0, position: { x: 860, y: 300 } },
+  { id: 'pool-5', code: 'P-005', name: '缺氧池', type: 'anoxic', capacity: 500, maxLevel: 4.0, warningLevel: 3.6, lowWarningLevel: 0.5, position: { x: 340, y: 300 } },
+  { id: 'pool-4', code: 'P-004', name: '厌氧池', type: 'anaerobic', capacity: 600, maxLevel: 4.5, warningLevel: 4.0, lowWarningLevel: 0.5, position: { x: 600, y: 300 } },
+  { id: 'pool-9', code: 'P-009', name: '污泥浓缩池', type: 'sludge', capacity: 250, maxLevel: 3.5, warningLevel: 3.0, lowWarningLevel: 0.5, position: { x: 860, y: 300 } },
   // 第三行：后续处理
-  { id: 'pool-6', code: 'P-006', name: '好氧池', type: 'aerobic', capacity: 800, maxLevel: 4.5, warningLevel: 4.0, position: { x: 340, y: 520 } },
-  { id: 'pool-7', code: 'P-007', name: '膜池', type: 'membrane', capacity: 400, maxLevel: 4.0, warningLevel: 3.5, position: { x: 600, y: 520 } },
-  { id: 'pool-8', code: 'P-008', name: '消毒池', type: 'disinfection', capacity: 300, maxLevel: 3.5, warningLevel: 3.0, position: { x: 860, y: 520 } },
+  { id: 'pool-6', code: 'P-006', name: '好氧池', type: 'aerobic', capacity: 800, maxLevel: 4.5, warningLevel: 4.0, lowWarningLevel: 0.5, position: { x: 340, y: 520 } },
+  { id: 'pool-7', code: 'P-007', name: '膜池', type: 'membrane', capacity: 400, maxLevel: 4.0, warningLevel: 3.5, lowWarningLevel: 0.5, position: { x: 600, y: 520 } },
+  { id: 'pool-8', code: 'P-008', name: '消毒池', type: 'disinfection', capacity: 300, maxLevel: 3.5, warningLevel: 3.0, lowWarningLevel: 0.5, position: { x: 860, y: 520 } },
 ];
 
 function randomInRange(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
 
-function getDeviceStatus(): 'running' | 'stopped' | 'fault' | 'maintenance' {
+function getDeviceStatus(): 'running' | 'stopped' | 'fault' {
   const rand = Math.random();
   if (rand > 0.95) return 'fault';
-  if (rand > 0.9) return 'maintenance';
   if (rand > 0.15) return 'running';
   return 'stopped';
 }
@@ -39,7 +39,12 @@ function getDeviceStatus(): 'running' | 'stopped' | 'fault' | 'maintenance' {
 export function generateInitialPools(): PoolData[] {
   return poolConfigs.map((config) => {
     const currentLevel = randomInRange(config.maxLevel * 0.4, config.maxLevel * 0.85);
-    const status = currentLevel > config.warningLevel ? 'warning' : 'normal';
+    let status: 'normal' | 'warning' | 'danger' = 'normal';
+    if (currentLevel > config.warningLevel) {
+      status = 'warning';
+    } else if (currentLevel < config.lowWarningLevel) {
+      status = 'danger';
+    }
 
     const devices: PoolData['devices'] = [];
     const parameters: PoolData['parameters'] = [];
@@ -51,8 +56,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-1-2', name: '进水泵2#', type: 'pump', status: getDeviceStatus(), runtime: 800 }
         );
         parameters.push(
-          { id: 'p-1-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [0.5, config.warningLevel] },
-          { id: 'p-1-2', name: '流量', value: randomInRange(50, 200), unit: 'm³/h', min: 0, max: 300, normalRange: [50, 200] }
+          { id: 'p-1-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] }
         );
         break;
       case 'grating':
@@ -61,8 +65,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-2-2', name: '输送机', type: 'conveyor', status: getDeviceStatus(), runtime: 1800 }
         );
         parameters.push(
-          { id: 'p-2-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [0.3, config.warningLevel] },
-          { id: 'p-2-2', name: '栅渣量', value: randomInRange(10, 45), unit: 'kg', min: 0, max: 100, normalRange: [0, 50] }
+          { id: 'p-2-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] }
         );
         break;
       case 'regulation':
@@ -72,7 +75,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-3-3', name: '推流搅拌器', type: 'mixer', status: getDeviceStatus(), runtime: 2000 }
         );
         parameters.push(
-          { id: 'p-3-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [1, config.warningLevel] },
+          { id: 'p-3-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-3-2', name: '流量', value: randomInRange(80, 150), unit: 'm³/h', min: 0, max: 200, normalRange: [80, 150] }
         );
         break;
@@ -83,10 +86,11 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-4-3', name: '蒸汽加热器', type: 'heater', status: getDeviceStatus(), runtime: 1800 }
         );
         parameters.push(
-          { id: 'p-4-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [1, config.warningLevel] },
+          { id: 'p-4-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-4-2', name: '温度', value: randomInRange(30, 38), unit: '°C', min: 0, max: 50, normalRange: [30, 38] },
-          { id: 'p-4-3', name: '溶解氧', value: randomInRange(0.05, 0.18), unit: 'mg/L', min: 0, max: 2, normalRange: [0, 0.2] },
-          { id: 'p-4-4', name: 'PH值', value: randomInRange(6.5, 7.5), unit: '', min: 0, max: 14, normalRange: [6.5, 7.5] }
+          { id: 'p-4-3', name: 'PH值', value: randomInRange(6.5, 7.5), unit: '', min: 0, max: 14, normalRange: [6.5, 7.5] },
+          { id: 'p-4-4', name: '溶解氧', value: randomInRange(0.05, 0.18), unit: 'mg/L', min: 0, max: 2, normalRange: [0, 0.2] },
+          { id: 'p-4-5', name: '污泥浓度', value: randomInRange(3000, 5000), unit: 'mg/L', min: 0, max: 8000, normalRange: [3000, 5000] }
         );
         break;
       case 'anoxic':
@@ -95,7 +99,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-5-2', name: '潜水推流器2#', type: 'mixer', status: getDeviceStatus(), runtime: 1900 }
         );
         parameters.push(
-          { id: 'p-5-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [1, config.warningLevel] },
+          { id: 'p-5-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-5-2', name: '溶解氧', value: randomInRange(0.2, 0.5), unit: 'mg/L', min: 0, max: 2, normalRange: [0.2, 0.5] },
           { id: 'p-5-3', name: '污泥浓度', value: randomInRange(3000, 5000), unit: 'mg/L', min: 0, max: 8000, normalRange: [3000, 5000] },
           { id: 'p-5-4', name: 'PH值', value: randomInRange(6.8, 7.8), unit: '', min: 0, max: 14, normalRange: [6.8, 7.8] }
@@ -108,7 +112,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-6-3', name: '硝化液回流泵', type: 'pump', status: getDeviceStatus(), runtime: 2000 }
         );
         parameters.push(
-          { id: 'p-6-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [1, config.warningLevel] },
+          { id: 'p-6-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-6-2', name: '污泥浓度', value: randomInRange(3000, 5000), unit: 'mg/L', min: 0, max: 8000, normalRange: [3000, 5000] },
           { id: 'p-6-3', name: 'PH值', value: randomInRange(7.0, 8.0), unit: '', min: 0, max: 14, normalRange: [7.0, 8.0] }
         );
@@ -122,7 +126,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-7-5', name: '电动阀', type: 'valve', status: getDeviceStatus(), runtime: 3000 }
         );
         parameters.push(
-          { id: 'p-7-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [1, config.warningLevel] },
+          { id: 'p-7-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-7-2', name: '污泥浓度', value: randomInRange(8000, 12000), unit: 'mg/L', min: 0, max: 15000, normalRange: [8000, 12000] },
           { id: 'p-7-3', name: '跨膜压差', value: randomInRange(10, 28), unit: 'kPa', min: 0, max: 50, normalRange: [0, 30] }
         );
@@ -134,7 +138,7 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-8-3', name: '出水泵', type: 'pump', status: getDeviceStatus(), runtime: 2000 }
         );
         parameters.push(
-          { id: 'p-8-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [0.5, config.warningLevel] },
+          { id: 'p-8-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
           { id: 'p-8-2', name: '余氯', value: randomInRange(0.5, 4.0), unit: 'mg/L', min: 0, max: 10, normalRange: [0.5, 4.0] }
         );
         break;
@@ -145,8 +149,8 @@ export function generateInitialPools(): PoolData[] {
           { id: 'd-9-3', name: '脱水机', type: 'dehydrator', status: getDeviceStatus(), runtime: 800 }
         );
         parameters.push(
-          { id: 'p-9-1', name: '污泥界面', value: randomInRange(1.0, 3.0), unit: 'm', min: 0, max: config.maxLevel, normalRange: [1.0, 3.0] },
-          { id: 'p-9-2', name: '含固率', value: randomInRange(2, 4), unit: '%', min: 0, max: 10, normalRange: [2, 4] }
+          { id: 'p-9-1', name: '液位', value: currentLevel, unit: 'm', min: 0, max: config.maxLevel, normalRange: [config.lowWarningLevel, config.warningLevel] },
+          { id: 'p-9-2', name: '污泥浓度', value: randomInRange(8000, 12000), unit: 'mg/L', min: 0, max: 15000, normalRange: [8000, 12000] }
         );
         break;
     }
@@ -189,7 +193,12 @@ export function updatePoolData(pools: PoolData[]): PoolData[] {
   return pools.map((pool) => {
     const newLevel = pool.currentLevel + randomInRange(-0.1, 0.15);
     const clampedLevel = Math.max(0.1, Math.min(pool.maxLevel, newLevel));
-    const newStatus = clampedLevel > pool.warningLevel ? 'warning' : 'normal';
+    let newStatus: 'normal' | 'warning' | 'danger' = 'normal';
+    if (clampedLevel > pool.warningLevel) {
+      newStatus = 'warning';
+    } else if (clampedLevel < pool.lowWarningLevel) {
+      newStatus = 'danger';
+    }
 
     const updatedParameters = pool.parameters.map((param) => {
       if (param.name === '液位') {
@@ -202,7 +211,7 @@ export function updatePoolData(pools: PoolData[]): PoolData[] {
 
     const updatedDevices = pool.devices.map((device) => {
       if (Math.random() > 0.98) {
-        const statuses: Array<'running' | 'stopped' | 'fault' | 'maintenance'> = ['running', 'stopped', 'fault', 'maintenance'];
+        const statuses: Array<'running' | 'stopped' | 'fault'> = ['running', 'stopped', 'fault'];
         return { ...device, status: statuses[Math.floor(Math.random() * statuses.length)] };
       }
       return device;
@@ -222,16 +231,48 @@ export function updatePoolData(pools: PoolData[]): PoolData[] {
 export function checkAlarms(pools: PoolData[]): Alarm[] {
   const alarms: Alarm[] = [];
   pools.forEach((pool) => {
+    // 高液位告警
     if (pool.currentLevel > pool.warningLevel) {
       alarms.push({
         id: `alarm-${pool.id}-${Date.now()}`,
         poolId: pool.id,
         level: pool.currentLevel > pool.maxLevel ? 'danger' : 'warning',
-        message: `${pool.name} 水位超限: ${pool.currentLevel.toFixed(2)}m`,
+        message: `${pool.name} 高液位告警: ${pool.currentLevel.toFixed(2)}m`,
         timestamp: new Date(),
         acknowledged: false,
       });
     }
+    // 低液位告警
+    if (pool.currentLevel < pool.lowWarningLevel) {
+      alarms.push({
+        id: `alarm-${pool.id}-low-${Date.now()}`,
+        poolId: pool.id,
+        level: 'danger',
+        message: `${pool.name} 低液位告警: ${pool.currentLevel.toFixed(2)}m`,
+        timestamp: new Date(),
+        acknowledged: false,
+      });
+    }
+
+    // 参数异常告警
+    pool.parameters.forEach((param) => {
+      if (param.name === '液位' || param.name === '水位占比') return;
+      
+      const [minNormal, maxNormal] = param.normalRange;
+      if (param.value < minNormal || param.value > maxNormal) {
+        const isHigh = param.value > maxNormal;
+        alarms.push({
+          id: `alarm-${pool.id}-${param.id}-${Date.now()}`,
+          poolId: pool.id,
+          level: 'warning',
+          message: `${pool.name} ${param.name}${isHigh ? '过高' : '过低'}: ${param.value.toFixed(2)}${param.unit}`,
+          timestamp: new Date(),
+          acknowledged: false,
+        });
+      }
+    });
+
+    // 设备故障告警
     pool.devices.forEach((device) => {
       if (device.status === 'fault') {
         alarms.push({

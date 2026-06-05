@@ -6,6 +6,7 @@ export interface PoolData {
   capacity: number;
   maxLevel: number;
   warningLevel: number;
+  lowWarningLevel: number;
   currentLevel: number;
   flowRate: number;
   status: 'normal' | 'warning' | 'danger';
@@ -29,7 +30,7 @@ export interface Device {
   id: string;
   name: string;
   type: string;
-  status: 'running' | 'stopped' | 'fault' | 'maintenance';
+  status: 'running' | 'stopped' | 'fault';
   runtime: number;
 }
 
@@ -67,4 +68,11 @@ export interface Alarm {
 export interface DataPoint {
   timestamp: Date;
   value: number;
+}
+
+export interface ParameterHistory {
+  paramId: string;
+  paramName: string;
+  unit: string;
+  data: DataPoint[];
 }
