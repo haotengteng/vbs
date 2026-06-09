@@ -5,8 +5,8 @@ export interface PoolData {
   type: PoolType;
   capacity: number;
   maxLevel: number;
-  warningLevel: number;
-  lowWarningLevel: number;
+  highLevel: number;
+  lowLevel: number;
   currentLevel: number;
   flowRate: number;
   status: 'normal' | 'warning' | 'danger';

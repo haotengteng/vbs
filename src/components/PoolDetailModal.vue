@@ -50,8 +50,8 @@ const staticParams = computed(() => {
   return [
     { label: '总容量', value: `${props.pool.capacity}m³`, icon: Database },
     { label: '最大水位', value: `${props.pool.maxLevel}m`, icon: Droplets },
-    { label: '高液位警戒', value: `${props.pool.warningLevel}m`, color: '#f59e0b' },
-    { label: '低液位警戒', value: `${props.pool.lowWarningLevel}m`, color: '#ef4444' },
+    { label: '高液位警戒', value: `${props.pool.highLevel}m`, color: '#f59e0b' },
+    { label: '低液位警戒', value: `${props.pool.lowLevel}m`, color: '#ef4444' },
   ];
 });
 

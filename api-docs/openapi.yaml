@@ -1,0 +1,1266 @@
+openapi: 3.0.3
+info:
+  title: 污水净化监控平台 API
+  description: |
+    污水净化监控平台后端服务接口文档。
+    提供水池监控、设备管理、告警处理、历史数据查询等功能的RESTful API。
+  version: 1.0.0
+  contact:
+    name: 技术支持
+servers:
+  - url: http://localhost:8080/api
+    description: 本地开发环境
+
+# ==================== 安全认证 ====================
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "登录成功后获取的JWT Token，在请求头中以 Authorization: Bearer <token> 形式传递"
+
+  # ==================== 通用响应模型 ====================
+  schemas:
+    # 统一响应包装
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 业务状态码
+          example: 200
+        message:
+          type: string
+          description: 响应消息
+          example: success
+        data:
+          type: object
+          description: 响应数据
+      required:
+        - code
+        - message
+
+    # 分页响应
+    PageResult:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: 总记录数
+        page:
+          type: integer
+          description: 当前页码
+        size:
+          type: integer
+          description: 每页大小
+        list:
+          type: array
+          items:
+            type: object
+
+    # ==================== 业务数据模型 ====================
+    Pool:
+      type: object
+      description: 水池（处理单元）信息
+      properties:
+        id:
+          type: string
+          description: 前端展示用ID
+          example: pool-1
+        code:
+          type: string
+          description: 水池编码
+          example: P-001
+        name:
+          type: string
+          description: 水池名称
+          example: "集水池"
+        type:
+          type: string
+          description: 水池类型
+          enum: [collection, grating, regulation, anaerobic, anoxic, aerobic, membrane, disinfection, sludge]
+          example: collection
+        capacity:
+          type: number
+          description: 总容量(m³)
+          example: 800
+        maxLevel:
+          type: number
+          description: 最大水位(m)
+          example: 5.0
+        highLevel:
+          type: number
+          description: 高液位警戒值(m)
+          example: 4.5
+        lowLevel:
+          type: number
+          description: 低液位警戒值(m)
+          example: 0.5
+        currentLevel:
+          type: number
+          description: 当前水位(m)
+          example: 3.25
+        flowRate:
+          type: number
+          description: 当前流量(m³/h)
+          example: 120.5
+        status:
+          type: string
+          description: 运行状态
+          enum: [normal, warning, danger]
+          example: normal
+        position:
+          type: object
+          description: 拓扑图位置坐标
+          properties:
+            x:
+              type: number
+              example: 80
+            y:
+              type: number
+              example: 80
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Parameter'
+      required:
+        - id, code, name, type, capacity, maxLevel, currentLevel, status
+
+    Device:
+      type: object
+      description: 设备信息
+      properties:
+        id:
+          type: string
+          description: 设备唯一标识
+          example: d-1-1
+        name:
+          type: string
+          description: 设备名称
+          example: "进水泵1#"
+        type:
+          type: string
+          description: 设备类型
+          enum: [pump, grating_machine, conveyor, mixer, blower, heater, valve, dosing, sensor, dehydrator]
+          example: pump
+        status:
+          type: string
+          description: 设备运行状态
+          enum: [running, stopped, fault]
+          example: running
+        runtime:
+          type: integer
+          description: 累计运行时长(分钟)
+          example: 1200
+      required:
+        - id, name, type, status, runtime
+
+    Parameter:
+      type: object
+      description: 监测参数
+      properties:
+        id:
+          type: string
+          description: 参数唯一标识
+          example: p-1-1
+        name:
+          type: string
+          description: 参数名称
+          example: "液位"
+        value:
+          type: number
+          description: 当前数值
+          example: 3.25
+        unit:
+          type: string
+          description: 单位
+          example: m
+        min:
+          type: number
+          description: 最小值
+          example: 0
+        max:
+          type: number
+          description: 最大值
+          example: 5.0
+        normalRange:
+          type: array
+          description: 正常范围 [最小值, 最大值]
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+          example: [0.5, 4.5]
+      required:
+        - id, name, value, unit, min, max, normalRange
+
+    FlowPath:
+      type: object
+      description: 水流路径（拓扑图连线）
+      properties:
+        id:
+          type: string
+          description: 路径唯一标识
+          example: f-1
+        from:
+          type: string
+          description: 起始水池ID
+          example: pool-1
+        to:
+          type: string
+          description: 目标水池ID
+          example: pool-2
+        type:
+          type: string
+          description: 路径类型
+          enum: [forward, recycle, internal]
+          example: forward
+        active:
+          type: boolean
+          description: 是否激活（有水流）
+          example: true
+        fromSide:
+          type: string
+          description: 起始连接边
+          enum: [top, bottom, left, right]
+          example: right
+        toSide:
+          type: string
+          description: 目标连接边
+          enum: [top, bottom, left, right]
+          example: left
+      required:
+        - id, from, to, type, active
+
+    Alarm:
+      type: object
+      description: 告警信息
+      properties:
+        id:
+          type: string
+          description: 告警唯一标识
+          example: alarm-pool-1-1717800000000
+        poolId:
+          type: string
+          description: 关联水池ID
+          example: pool-1
+        level:
+          type: string
+          description: 告警级别
+          enum: [warning, danger]
+          example: warning
+        message:
+          type: string
+          description: 告警内容
+          example: "集水池 高液位告警: 4.52m"
+        timestamp:
+          type: string
+          format: date-time
+          description: 告警发生时间
+          example: "2024-06-08T14:30:00+08:00"
+        acknowledged:
+          type: boolean
+          description: 是否已确认
+          example: false
+      required:
+        - id, poolId, level, message, timestamp, acknowledged
+
+    DataPoint:
+      type: object
+      description: 时序数据点
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: 数据时间戳
+          example: "2024-06-08T14:30:00+08:00"
+        value:
+          type: number
+          description: 数值
+          example: 3.25
+      required:
+        - timestamp, value
+
+    ParameterHistory:
+      type: object
+      description: 参数历史数据
+      properties:
+        paramId:
+          type: string
+          description: 参数ID
+          example: p-1-1
+        paramName:
+          type: string
+          description: 参数名称
+          example: "液位"
+        unit:
+          type: string
+          description: 单位
+          example: m
+        data:
+          type: array
+          description: 历史数据点列表
+          items:
+            $ref: '#/components/schemas/DataPoint'
+      required:
+        - paramId, paramName, unit, data
+
+    LoginRequest:
+      type: object
+      description: 登录请求
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: admin
+        password:
+          type: string
+          description: 密码
+          format: password
+          example: "123456"
+      required:
+        - username, password
+
+    LoginResponse:
+      type: object
+      description: 登录响应数据
+      properties:
+        token:
+          type: string
+          description: JWT访问令牌
+          example: eyJhbGciOiJIUzI1NiIs...
+        username:
+          type: string
+          description: 用户名
+          example: admin
+        realName:
+          type: string
+          description: 真实姓名
+          example: "管理员"
+        role:
+          type: string
+          description: 角色
+          enum: [admin, operator, viewer]
+          example: admin
+      required:
+        - token, username, role
+
+    DeviceCommandRequest:
+      type: object
+      description: 设备控制指令请求
+      properties:
+        deviceId:
+          type: string
+          description: 设备ID
+          example: d-1-1
+        operation:
+          type: string
+          description: 操作类型
+          enum: [start, stop, reset]
+          example: start
+      required:
+        - deviceId, operation
+
+    DeviceCommandResponse:
+      type: object
+      description: 设备控制指令响应
+      properties:
+        id:
+          type: integer
+          description: 控制记录ID
+        deviceId:
+          type: string
+          description: 设备ID
+        deviceName:
+          type: string
+          description: 设备名称
+        operation:
+          type: string
+          description: 操作类型
+        result:
+          type: string
+          description: 执行结果
+          enum: [success, failed, pending]
+        operator:
+          type: string
+          description: 操作人
+        createTime:
+          type: string
+          format: date-time
+          description: 操作时间
+      required:
+        - id, deviceId, operation, result
+
+    DashboardStats:
+      type: object
+      description: 仪表盘统计数据
+      properties:
+        totalPools:
+          type: integer
+          description: 水池总数
+          example: 9
+        runningDevices:
+          type: integer
+          description: 运行中设备数
+          example: 27
+        faultDevices:
+          type: integer
+          description: 故障设备数
+          example: 2
+        activeAlarms:
+          type: integer
+          description: 活跃告警数
+          example: 3
+        totalFlowRate:
+          type: number
+          description: 总流量(m³/h)
+          example: 856.5
+        deviceCategories:
+          type: array
+          description: 各水池设备分布
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "缺氧池"
+              value:
+                type: integer
+                example: 9
+              color:
+                type: string
+                example: '#00d4ff'
+
+    InOutFlowData:
+      type: object
+      description: 进出水流量时序数据
+      properties:
+        inlet:
+          type: array
+          description: 进水流量数据
+          items:
+            $ref: '#/components/schemas/DataPoint'
+        outlet:
+          type: array
+          description: 出水流量数据
+          items:
+            $ref: '#/components/schemas/DataPoint'
+
+  # ==================== 错误响应 ====================
+  responses:
+    UnauthorizedError:
+      description: 未授权，Token无效或已过期
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 401
+            message: 未授权，请重新登录
+            data: null
+
+    ForbiddenError:
+      description: 无权限访问
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 403
+            message: 无权限执行此操作
+            data: null
+
+    NotFoundError:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 404
+            message: 资源不存在
+            data: null
+
+    ValidationError:
+      description: 请求参数校验失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 400
+            message: 参数校验失败
+            data:
+              username: 用户名不能为空
+
+    ServerError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 500
+            message: 服务器内部错误
+            data: null
+
+# ==================== 接口定义 ====================
+paths:
+  # ========== 认证接口 ==========
+  /auth/login:
+    post:
+      tags:
+        - 认证管理
+      summary: 用户登录
+      description: 用户登录获取JWT Token
+      security: []  # 登录接口不需要认证
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResponse'
+              example:
+                code: 200
+                message: 登录成功
+                data:
+                  token: eyJhbGciOiJIUzI1NiIs...
+                  username: admin
+                  realName: 管理员
+                  role: admin
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 401
+                message: 用户名或密码错误
+                data: null
+
+  /auth/logout:
+    post:
+      tags:
+        - 认证管理
+      summary: 用户登出
+      description: 退出登录，清除Token
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: 登出成功
+                data: null
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - 认证管理
+      summary: 刷新Token
+      description: 使用Refresh Token获取新的Access Token
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 水池管理接口 ==========
+  /pools:
+    get:
+      tags:
+        - 水池管理
+      summary: 获取所有水池列表
+      description: |
+        获取所有水池的完整信息，包括设备列表和监测参数。
+        用于Dashboard拓扑图展示和右侧数据面板。
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Pool'
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: pool-1
+                    code: P-001
+                    name: 集水池
+                    type: collection
+                    capacity: 800
+                    maxLevel: 5.0
+                    highLevel: 4.5
+                    lowLevel: 0.5
+                    currentLevel: 3.25
+                    flowRate: 120.5
+                    status: normal
+                    position:
+                      x: 80
+                      y: 80
+                    devices:
+                      - id: d-1-1
+                        name: 进水泵1#
+                        type: pump
+                        status: running
+                        runtime: 1200
+                    parameters:
+                      - id: p-1-1
+                        name: 液位
+                        value: 3.25
+                        unit: m
+                        min: 0
+                        max: 5.0
+                        normalRange: [0.5, 4.5]
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /pools/{poolId}:
+    get:
+      tags:
+        - 水池管理
+      summary: 获取单个水池详情
+      description: 根据水池ID获取详细信息
+      parameters:
+        - name: poolId
+          in: path
+          required: true
+          description: 水池ID
+          schema:
+            type: string
+          example: pool-1
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Pool'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 设备管理接口 ==========
+  /devices:
+    get:
+      tags:
+        - 设备管理
+      summary: 获取设备列表
+      description: 分页查询设备列表，支持按水池ID筛选
+      parameters:
+        - name: poolId
+          in: query
+          description: 水池ID（可选，不传则查询所有）
+          schema:
+            type: string
+          example: pool-1
+        - name: status
+          in: query
+          description: 设备状态筛选（可选）
+          schema:
+            type: string
+            enum: [running, stopped, fault]
+          example: running
+        - name: page
+          in: query
+          description: 页码，默认1
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: 每页大小，默认20
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResult'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /devices/{deviceId}:
+    get:
+      tags:
+        - 设备管理
+      summary: 获取设备详情
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: d-1-1
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Device'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /devices/command:
+    post:
+      tags:
+        - 设备管理
+      summary: 下发设备控制指令
+      description: |
+        向指定设备下发控制指令（启动/停止/复位）。
+        指令通过MQTT协议下发到设备，同时记录操作日志。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCommandRequest'
+      responses:
+        '200':
+          description: 指令下发成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DeviceCommandResponse'
+              example:
+                code: 200
+                message: 指令下发成功
+                data:
+                  id: 1
+                  deviceId: d-1-1
+                  deviceName: 进水泵1#
+                  operation: start
+                  result: success
+                  operator: admin
+                  createTime: "2024-06-08T14:30:00+08:00"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 告警管理接口 ==========
+  /alarms:
+    get:
+      tags:
+        - 告警管理
+      summary: 获取告警列表
+      description: |
+        分页查询告警列表，支持按状态、级别、水池ID筛选。
+        用于Dashboard底部告警表格展示。
+      parameters:
+        - name: status
+          in: query
+          description: 告警状态筛选
+          schema:
+            type: string
+            enum: [unack, ack, all]
+            default: all
+          example: unack
+        - name: level
+          in: query
+          description: 告警级别筛选
+          schema:
+            type: string
+            enum: [warning, danger]
+          example: danger
+        - name: poolId
+          in: query
+          description: 水池ID筛选
+          schema:
+            type: string
+          example: pool-1
+        - name: page
+          in: query
+          description: 页码
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: 每页大小
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PageResult'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /alarms/unack:
+    get:
+      tags:
+        - 告警管理
+      summary: 获取未确认告警
+      description: 获取所有未确认的告警列表（快捷接口）
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Alarm'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /alarms/{alarmId}/ack:
+    put:
+      tags:
+        - 告警管理
+      summary: 确认告警
+      description: 将指定告警标记为已确认状态
+      parameters:
+        - name: alarmId
+          in: path
+          required: true
+          description: 告警ID
+          schema:
+            type: string
+          example: alarm-pool-1-1717800000000
+      responses:
+        '200':
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: 告警已确认
+                data: null
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /alarms/stats:
+    get:
+      tags:
+        - 告警管理
+      summary: 获取告警统计
+      description: 获取告警数量统计（按级别分组）
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          warning:
+                            type: integer
+                            example: 5
+                          danger:
+                            type: integer
+                            example: 2
+                          total:
+                            type: integer
+                            example: 7
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 历史数据接口 ==========
+  /history/sensor/{sensorId}:
+    get:
+      tags:
+        - 历史数据
+      summary: 查询传感器历史数据
+      description: |
+        查询指定传感器的历史数据，用于参数趋势图展示。
+        默认返回最近24小时数据。
+      parameters:
+        - name: sensorId
+          in: path
+          required: true
+          description: 传感器/参数ID
+          schema:
+            type: string
+          example: p-1-1
+        - name: hours
+          in: query
+          description: 查询时间范围（小时），默认24
+          schema:
+            type: integer
+            default: 24
+          example: 24
+        - name: interval
+          in: query
+          description: 数据聚合间隔（分钟），默认5
+          schema:
+            type: integer
+            default: 5
+          example: 5
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DataPoint'
+              example:
+                code: 200
+                message: success
+                data:
+                  - timestamp: "2024-06-08T14:00:00+08:00"
+                    value: 3.25
+                  - timestamp: "2024-06-08T14:05:00+08:00"
+                    value: 3.28
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /history/device/{deviceId}:
+    get:
+      tags:
+        - 历史数据
+      summary: 查询设备状态历史
+      description: 查询指定设备的状态变化历史
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: 设备ID
+          schema:
+            type: string
+          example: d-1-1
+        - name: hours
+          in: query
+          description: 查询时间范围（小时），默认24
+          schema:
+            type: integer
+            default: 24
+          example: 24
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            timestamp:
+                              type: string
+                              format: date-time
+                            status:
+                              type: string
+                              enum: [running, stopped, fault]
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /history/flow:
+    get:
+      tags:
+        - 历史数据
+      summary: 查询进出水流量历史
+      description: |
+        查询系统整体进出水流量历史数据。
+        用于Dashboard底部效率图表和气体图表展示。
+      parameters:
+        - name: hours
+          in: query
+          description: 查询时间范围（小时），默认24
+          schema:
+            type: integer
+            default: 24
+          example: 24
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InOutFlowData'
+              example:
+                code: 200
+                message: success
+                data:
+                  inlet:
+                    - timestamp: "2024-06-08T14:00:00+08:00"
+                      value: 120.5
+                    - timestamp: "2024-06-08T14:05:00+08:00"
+                      value: 118.3
+                  outlet:
+                    - timestamp: "2024-06-08T14:00:00+08:00"
+                      value: 115.2
+                    - timestamp: "2024-06-08T14:05:00+08:00"
+                      value: 112.8
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 仪表盘统计接口 ==========
+  /dashboard/stats:
+    get:
+      tags:
+        - 仪表盘统计
+      summary: 获取仪表盘统计数据
+      description: |
+        获取Dashboard右侧面板和顶部状态栏所需的统计数据。
+        包括设备运行状态、告警数量、流量统计等。
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardStats'
+              example:
+                code: 200
+                message: success
+                data:
+                  totalPools: 9
+                  runningDevices: 27
+                  faultDevices: 2
+                  activeAlarms: 3
+                  totalFlowRate: 856.5
+                  deviceCategories:
+                    - name: 缺氧池
+                      value: 9
+                      color: '#00d4ff'
+                    - name: 调节池
+                      value: 12
+                      color: '#00ccff'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /dashboard/monitor:
+    get:
+      tags:
+        - 仪表盘统计
+      summary: 获取实时监控数据
+      description: |
+        获取设备监控面板所需的实时数据。
+        用于右侧"设备监控"组件展示。
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            label:
+                              type: string
+                              example: "膜池液位"
+                            value:
+                              type: string
+                              example: '1.08'
+                            unit:
+                              type: string
+                              example: m
+                            status:
+                              type: string
+                              enum: [normal, warning, danger]
+                              example: normal
+                            icon:
+                              type: string
+                              example: gauge
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== 流程路径接口 ==========
+  /flow-paths:
+    get:
+      tags:
+        - 流程路径
+      summary: 获取水流路径列表
+      description: |
+        获取所有水池之间的水流路径信息。
+        用于Dashboard拓扑图连线展示。
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FlowPath'
+              example:
+                code: 200
+                message: success
+                data:
+                  - id: f-1
+                    from: pool-1
+                    to: pool-2
+                    type: forward
+                    active: true
+                  - id: f-2
+                    from: pool-2
+                    to: pool-3
+                    type: forward
+                    active: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========== MQTT消息接口（内部使用） ==========
+  /mqtt/publish:
+    post:
+      tags:
+        - MQTT消息
+      summary: 发布MQTT消息（调试用）
+      description: 手动发布MQTT消息到指定主题
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                  description: MQTT主题
+                  example: swims/control/d-1-1
+                payload:
+                  type: string
+                  description: 消息内容
+                  example: '{"operation":"start"}'
+                qos:
+                  type: integer
+                  description: QoS等级
+                  enum: [0, 1, 2]
+                  default: 1
+              required:
+                - topic
+                - payload
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
