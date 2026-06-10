@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { PoolData, ParameterHistory } from '@/types';
+import type { PoolData, SensorHistory } from '@/types';
 import { useProcessStore } from '@/stores/processStore';
-import ParamHistoryChart from './ParamHistoryChart.vue';
+import SensorHistoryChart from './SensorHistoryChart.vue';
 import { X, Activity, Droplets, Settings, Database, Gauge } from '@lucide/vue';
 
 interface Props {
@@ -15,8 +15,8 @@ const emit = defineEmits<{
 }>();
 
 const store = useProcessStore();
-const selectedParam = ref<ParameterHistory | null>(null);
-const activeParamId = ref<string | null>(null);
+const selectedSensor = ref<SensorHistory | null>(null);
+const activeSensorId = ref<string | null>(null);
 
 const isOpen = computed(() => props.pool !== null);
 
@@ -44,21 +44,21 @@ const statusColor = computed(() => {
   }
 });
 
-// 静态配置参数
+// 静态配置传感器
 const staticParams = computed(() => {
   if (!props.pool) return [];
   return [
     { label: '总容量', value: `${props.pool.capacity}m³`, icon: Database },
-    { label: '最大水位', value: `${props.pool.maxLevel}m`, icon: Droplets },
+    { label: '最大水位', value: `${props.pool.maxLevel}m`, icon: Droplets, color: '#ef4444' },
     { label: '高液位警戒', value: `${props.pool.highLevel}m`, color: '#f59e0b' },
-    { label: '低液位警戒', value: `${props.pool.lowLevel}m`, color: '#ef4444' },
+    { label: '低液位警戒', value: `${props.pool.lowLevel}m`, color: '#f59e0b' },
   ];
 });
 
-// 实时参数（包含水位和其他动态参数）
-const realtimeParams = computed(() => {
+// 实时传感器（包含水位和其他动态传感器）
+const realtimeSensors = computed(() => {
   if (!props.pool) return [];
-  const params = [
+  const sensors = [
     {
       id: 'level',
       name: '当前水位',
@@ -77,51 +77,52 @@ const realtimeParams = computed(() => {
     },
   ];
 
-  // 添加其他动态参数
-  props.pool.parameters.forEach((param) => {
-    if (param.name !== '液位') {
-      params.push({
-        id: param.id,
-        name: param.name,
-        value: param.value,
-        unit: param.unit,
-        color: undefined,
+  // 添加其他动态传感器
+  props.pool.sensors.forEach((sensor) => {
+    if (sensor.name !== '液位') {
+      sensors.push({
+        id: sensor.id,
+        name: sensor.name,
+        value: sensor.value,
+        unit: sensor.unit,
+        color: sensor.value < sensor.min || sensor.value > sensor.max ? '#ef4444' : '#00d4ff',
         chartable: true,
       });
     }
   });
-
-  return params;
+  return sensors;
 });
 
 function close() {
   emit('close');
 }
 
-function formatRuntime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
+function formatStatusTime(date: Date): string {
+  const d = new Date(date);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
 }
 
-function toggleParamHistory(paramId: string, paramName: string, unit: string) {
+function toggleSensorHistory(sensorId: string, sensorName: string, unit: string) {
   if (!props.pool) return;
   
-  // 如果点击的是当前已展开的参数，则关闭
-  if (activeParamId.value === paramId) {
-    activeParamId.value = null;
-    selectedParam.value = null;
+  // 如果点击的是当前已展开的传感器，则关闭
+  if (activeSensorId.value === sensorId) {
+    activeSensorId.value = null;
+    selectedSensor.value = null;
     return;
   }
   
-  activeParamId.value = paramId;
-  const history = store.getParamHistory(props.pool.id, paramId);
+  activeSensorId.value = sensorId;
+  const history = store.getSensorHistory(props.pool.id, sensorId);
   if (history && history.data.length > 0) {
-    selectedParam.value = history;
+    selectedSensor.value = history;
   } else {
-    selectedParam.value = {
-      paramId,
-      paramName,
+    selectedSensor.value = {
+      sensorId,
+      sensorName,
       unit,
       data: [],
     };
@@ -154,43 +155,43 @@ function toggleParamHistory(paramId: string, paramName: string, unit: string) {
               静态配置
             </h3>
             <div class="static-grid">
-              <div v-for="param in staticParams" :key="param.label" class="static-card">
-                <span class="static-label">{{ param.label }}</span>
-                <span class="static-value font-mono" :style="{ color: param.color || '#e2e8f0' }">
-                  {{ param.value }}
+              <div v-for="sensor in staticParams" :key="sensor.label" class="static-card">
+                <span class="static-label">{{ sensor.label }}</span>
+                <span class="static-value font-mono" :style="{ color: sensor.color || '#e2e8f0' }">
+                  {{ sensor.value }}
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- 实时参数 -->
+          <!-- 实时传感器 -->
           <div class="section">
             <h3 class="section-title">
               <Gauge :size="16" />
-              实时参数
-              <span class="hint">点击参数查看历史趋势</span>
+              实时传感器
+              <span class="hint">点击传感器查看历史趋势</span>
             </h3>
             <div class="realtime-grid">
-              <template v-for="param in realtimeParams" :key="param.id">
+              <template v-for="sensor in realtimeSensors" :key="sensor.id">
                 <div
                   class="realtime-card"
-                  :class="{ active: activeParamId === param.id, 'no-chart': !param.chartable }"
-                  @click="param.chartable && toggleParamHistory(param.id, param.name, param.unit)"
+                  :class="{ active: activeSensorId === sensor.id, 'no-chart': !sensor.chartable }"
+                  @click="sensor.chartable && toggleSensorHistory(sensor.id, sensor.name, sensor.unit)"
                 >
                   <div class="realtime-header">
-                    <span class="realtime-name">{{ param.name }}</span>
-                    <Activity v-if="param.chartable" :size="14" class="chart-icon" />
+                    <span class="realtime-name">{{ sensor.name }}</span>
+                    <Activity v-if="sensor.chartable" :size="14" class="chart-icon" />
                   </div>
-                  <span class="realtime-value font-mono" :style="{ color: param.color || '#00d4ff' }">
-                    {{ param.value.toFixed(2) }}{{ param.unit }}
+                  <span class="realtime-value font-mono" :style="{ color: sensor.color || '#00d4ff' }">
+                    {{ sensor.value.toFixed(2) }}{{ sensor.unit }}
                   </span>
                 </div>
               </template>
             </div>
-            <!-- 统一在实时参数栏目下方展示折线图 -->
-            <ParamHistoryChart
-              v-if="selectedParam && activeParamId"
-              :history="selectedParam"
+            <!-- 统一在实时传感器栏目下方展示折线图 -->
+            <SensorHistoryChart
+              v-if="selectedSensor && activeSensorId"
+              :history="selectedSensor"
             />
           </div>
 
@@ -211,11 +212,11 @@ function toggleParamHistory(paramId: string, paramName: string, unit: string) {
                   <span class="device-type">{{ device.type }}</span>
                 </div>
                 <div class="device-status">
-                  <label class="device-switch" :class="{ disabled: device.status === 'fault' }">
+                  <label class="device-switch" :class="{ disabled: device.status === 'fault' || device.status === 'offline' }">
                     <input
                       type="checkbox"
                       :checked="device.status === 'running'"
-                      :disabled="device.status === 'fault'"
+                      :disabled="device.status === 'fault' || device.status === 'offline'"
                       @change="store.toggleDeviceStatus(pool!.id, device.id)"
                     />
                     <span class="switch-slider"></span>
@@ -224,9 +225,9 @@ function toggleParamHistory(paramId: string, paramName: string, unit: string) {
                     class="status-tag"
                     :class="device.status"
                   >
-                    {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : '故障' }}
+                    {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : device.status === 'offline' ? '离线' : '故障' }}
                   </span>
-                  <span class="runtime">{{ formatRuntime(device.runtime) }}</span>
+                  <span class="status-time">{{ formatStatusTime(device.statusTime) }}</span>
                 </div>
               </div>
             </div>
@@ -372,7 +373,7 @@ function toggleParamHistory(paramId: string, paramName: string, unit: string) {
   color: #e2e8f0;
 }
 
-/* 实时参数 */
+/* 实时传感器 */
 .realtime-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -499,7 +500,12 @@ function toggleParamHistory(paramId: string, paramName: string, unit: string) {
   color: #ef4444;
 }
 
-.runtime {
+.status-tag.offline {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.status-time {
   font-size: 11px;
   color: #a0beeb;
   font-family: 'Roboto Mono', monospace;

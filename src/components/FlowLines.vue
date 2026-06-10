@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { FlowPath, PoolData, ConnectionSide } from '@/types';
+import { poolPositions } from '@/utils/mockData';
 
 interface Props {
   flowPaths: FlowPath[];
@@ -30,13 +31,19 @@ interface LineInfo {
   toSide: ConnectionSide;
 }
 
+function getPos(poolId: string): { x: number; y: number } {
+  return poolPositions[poolId];
+}
+
 /**
  * 智能路径算法：根据两个水池的相对位置，自动选择最优连接方向
  * 优先级：最短直线路径 > 最少转弯 > 默认规则
  */
 function autoSelectSides(fromPool: PoolData, toPool: PoolData): { fromSide: ConnectionSide; toSide: ConnectionSide } {
-  const dx = toPool.position.x - fromPool.position.x;
-  const dy = toPool.position.y - fromPool.position.y;
+  const fromPos = getPos(fromPool.id);
+  const toPos = getPos(toPool.id);
+  const dx = toPos.x - fromPos.x;
+  const dy = toPos.y - fromPos.y;
   const absDx = Math.abs(dx);
   const absDy = Math.abs(dy);
 
@@ -169,31 +176,32 @@ function autoSelectSides(fromPool: PoolData, toPool: PoolData): { fromSide: Conn
 }
 
 function getConnectionPoint(pool: PoolData, side: ConnectionSide): { x: number; y: number } {
+  const pos = getPos(pool.id);
   switch (side) {
     case 'top':
       return {
-        x: pool.position.x + POOL_WIDTH / 2,
-        y: pool.position.y,
+        x: pos.x + POOL_WIDTH / 2,
+        y: pos.y,
       };
     case 'bottom':
       return {
-        x: pool.position.x + POOL_WIDTH / 2,
-        y: pool.position.y + POOL_HEIGHT,
+        x: pos.x + POOL_WIDTH / 2,
+        y: pos.y + POOL_HEIGHT,
       };
     case 'left':
       return {
-        x: pool.position.x,
-        y: pool.position.y + POOL_HEIGHT / 2,
+        x: pos.x,
+        y: pos.y + POOL_HEIGHT / 2,
       };
     case 'right':
       return {
-        x: pool.position.x + POOL_WIDTH,
-        y: pool.position.y + POOL_HEIGHT / 2,
+        x: pos.x + POOL_WIDTH,
+        y: pos.y + POOL_HEIGHT / 2,
       };
     default:
       return {
-        x: pool.position.x + POOL_WIDTH,
-        y: pool.position.y + POOL_HEIGHT / 2,
+        x: pos.x + POOL_WIDTH,
+        y: pos.y + POOL_HEIGHT / 2,
       };
   }
 }
@@ -206,12 +214,13 @@ const lines = computed(() => {
     if (!fromPool || !toPool) return;
 
     if (path.type === 'internal') {
+      const pos = getPos(fromPool.id);
       result.push({
         id: path.id,
-        x1: fromPool.position.x + POOL_WIDTH,
-        y1: fromPool.position.y + POOL_HEIGHT / 2,
-        x2: fromPool.position.x + POOL_WIDTH,
-        y2: fromPool.position.y + POOL_HEIGHT / 2,
+        x1: pos.x + POOL_WIDTH,
+        y1: pos.y + POOL_HEIGHT / 2,
+        x2: pos.x + POOL_WIDTH,
+        y2: pos.y + POOL_HEIGHT / 2,
         type: path.type,
         active: path.active,
         fromSide: 'right',

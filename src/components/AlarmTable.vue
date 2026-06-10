@@ -9,7 +9,7 @@ const alarmList = computed(() => {
   return store.activeAlarms.slice(0, 8).map((alarm, index) => ({
     id: index + 1,
     time: formatTime(alarm.timestamp),
-    device: getDeviceName(alarm.message),
+    poolName: alarm.poolName,
     event: alarm.message,
     status: alarm.level === 'danger' ? 'pending' : 'processing' as const,
   }));
@@ -24,12 +24,6 @@ function formatTime(date: Date): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}小时前`;
   return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-');
-}
-
-function getDeviceName(message: string): string {
-  // 从告警消息中提取设备/池名称
-  const match = message.match(/^([^\s]+)/);
-  return match ? match[1] : '未知设备';
 }
 
 function getStatusText(status: string): string {
@@ -55,7 +49,7 @@ function getStatusClass(status: string): string {
           <tr>
             <th style="width: 40px">序号</th>
             <th style="width: 100px">时间</th>
-            <th style="width: 100px">报警设备</th>
+            <th style="width: 100px">水池名称</th>
             <th>报警事件</th>
             <th style="width: 80px">处理状态</th>
           </tr>
@@ -64,7 +58,7 @@ function getStatusClass(status: string): string {
           <tr v-for="alarm in alarmList" :key="alarm.id">
             <td>{{ alarm.id }}</td>
             <td>{{ alarm.time }}</td>
-            <td>{{ alarm.device }}</td>
+            <td>{{ alarm.poolName }}</td>
             <td>{{ alarm.event }}</td>
             <td>
               <span class="status-tag" :class="getStatusClass(alarm.status)">

@@ -79,11 +79,6 @@ components:
           type: string
           description: 水池名称
           example: "集水池"
-        type:
-          type: string
-          description: 水池类型
-          enum: [collection, grating, regulation, anaerobic, anoxic, aerobic, membrane, disinfection, sludge]
-          example: collection
         capacity:
           type: number
           description: 总容量(m³)
@@ -113,24 +108,14 @@ components:
           description: 运行状态
           enum: [normal, warning, danger]
           example: normal
-        position:
-          type: object
-          description: 拓扑图位置坐标
-          properties:
-            x:
-              type: number
-              example: 80
-            y:
-              type: number
-              example: 80
         devices:
           type: array
           items:
             $ref: '#/components/schemas/Device'
-        parameters:
+        sensors:
           type: array
           items:
-            $ref: '#/components/schemas/Parameter'
+            $ref: '#/components/schemas/Sensor'
       required:
         - id, code, name, type, capacity, maxLevel, currentLevel, status
 
@@ -154,26 +139,27 @@ components:
         status:
           type: string
           description: 设备运行状态
-          enum: [running, stopped, fault]
+          enum: [running, stopped, fault, offline]
           example: running
-        runtime:
-          type: integer
-          description: 累计运行时长(分钟)
-          example: 1200
+        statusTime:
+          type: string
+          format: date-time
+          description: 状态更新时间(ISO 8601)
+          example: "2026-06-09T14:30:00Z"
       required:
-        - id, name, type, status, runtime
+        - id, name, type, status, statusTime
 
-    Parameter:
+    Sensor:
       type: object
-      description: 监测参数
+      description: 传感器监测数据
       properties:
         id:
           type: string
-          description: 参数唯一标识
+          description: 传感器唯一标识
           example: p-1-1
         name:
           type: string
-          description: 参数名称
+          description: 传感器名称
           example: "液位"
         value:
           type: number
@@ -185,22 +171,14 @@ components:
           example: m
         min:
           type: number
-          description: 最小值
-          example: 0
+          description: 正常范围下限
+          example: 0.5
         max:
           type: number
-          description: 最大值
-          example: 5.0
-        normalRange:
-          type: array
-          description: 正常范围 [最小值, 最大值]
-          items:
-            type: number
-          minItems: 2
-          maxItems: 2
-          example: [0.5, 4.5]
+          description: 正常范围上限
+          example: 4.5
       required:
-        - id, name, value, unit, min, max, normalRange
+        - id, name, value, unit, min, max
 
     FlowPath:
       type: object
@@ -252,6 +230,10 @@ components:
           type: string
           description: 关联水池ID
           example: pool-1
+        poolName:
+          type: string
+          description: 关联水池名称
+          example: 调节池
         level:
           type: string
           description: 告警级别
@@ -266,12 +248,13 @@ components:
           format: date-time
           description: 告警发生时间
           example: "2024-06-08T14:30:00+08:00"
-        acknowledged:
-          type: boolean
-          description: 是否已确认
-          example: false
+        status:
+          type: string
+          description: 告警处理状态
+          enum: [unack, ack]
+          example: unack
       required:
-        - id, poolId, level, message, timestamp, acknowledged
+        - id, poolId, poolName, level, message, timestamp, status
 
     DataPoint:
       type: object
@@ -289,17 +272,17 @@ components:
       required:
         - timestamp, value
 
-    ParameterHistory:
+    SensorHistory:
       type: object
-      description: 参数历史数据
+      description: 传感器历史数据
       properties:
-        paramId:
+        sensorId:
           type: string
-          description: 参数ID
+          description: 传感器ID
           example: p-1-1
-        paramName:
+        sensorName:
           type: string
-          description: 参数名称
+          description: 传感器名称
           example: "液位"
         unit:
           type: string
@@ -311,7 +294,7 @@ components:
           items:
             $ref: '#/components/schemas/DataPoint'
       required:
-        - paramId, paramName, unit, data
+        - sensorId, sensorName, unit, data
 
     LoginRequest:
       type: object
@@ -612,7 +595,7 @@ paths:
         - 水池管理
       summary: 获取所有水池列表
       description: |
-        获取所有水池的完整信息，包括设备列表和监测参数。
+        获取所有水池的完整信息，包括设备列表和传感器监测数据。
         用于Dashboard拓扑图展示和右侧数据面板。
       responses:
         '200':
@@ -635,7 +618,6 @@ paths:
                   - id: pool-1
                     code: P-001
                     name: 集水池
-                    type: collection
                     capacity: 800
                     maxLevel: 5.0
                     highLevel: 4.5
@@ -643,23 +625,19 @@ paths:
                     currentLevel: 3.25
                     flowRate: 120.5
                     status: normal
-                    position:
-                      x: 80
-                      y: 80
                     devices:
                       - id: d-1-1
                         name: 进水泵1#
                         type: pump
                         status: running
-                        runtime: 1200
-                    parameters:
+                        statusTime: "2026-06-09T14:30:00Z"
+                    sensors:
                       - id: p-1-1
                         name: 液位
                         value: 3.25
                         unit: m
-                        min: 0
-                        max: 5.0
-                        normalRange: [0.5, 4.5]
+                        min: 0.5
+                        max: 4.5
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -962,13 +940,13 @@ paths:
         - 历史数据
       summary: 查询传感器历史数据
       description: |
-        查询指定传感器的历史数据，用于参数趋势图展示。
+        查询指定传感器的历史数据，用于传感器趋势图展示。
         默认返回最近24小时数据。
       parameters:
         - name: sensorId
           in: path
           required: true
-          description: 传感器/参数ID
+          description: 传感器ID
           schema:
             type: string
           example: p-1-1
@@ -1180,46 +1158,6 @@ paths:
                             icon:
                               type: string
                               example: gauge
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  # ========== 流程路径接口 ==========
-  /flow-paths:
-    get:
-      tags:
-        - 流程路径
-      summary: 获取水流路径列表
-      description: |
-        获取所有水池之间的水流路径信息。
-        用于Dashboard拓扑图连线展示。
-      responses:
-        '200':
-          description: 查询成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/FlowPath'
-              example:
-                code: 200
-                message: success
-                data:
-                  - id: f-1
-                    from: pool-1
-                    to: pool-2
-                    type: forward
-                    active: true
-                  - id: f-2
-                    from: pool-2
-                    to: pool-3
-                    type: forward
-                    active: true
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 

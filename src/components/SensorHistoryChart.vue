@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue';
-import type { ParameterHistory } from '@/types';
+import type { SensorHistory } from '@/types';
 
 interface Props {
-  history: ParameterHistory | null;
+  history: SensorHistory | null;
 }
 
 const props = defineProps<Props>();
@@ -155,8 +155,8 @@ watch(() => props.history, () => {
     <Transition name="chart-expand">
       <div v-if="hasData" class="chart-wrapper">
         <div class="chart-header-mini">
-          <span class="param-name">{{ history?.paramName }}</span>
-          <span class="param-unit">{{ history?.unit }}</span>
+          <span class="sensor-name">{{ history?.sensorName }}</span>
+          <span class="sensor-unit">{{ history?.unit }}</span>
           <span class="current-value-mini">
             当前: {{ history?.data[history.data.length - 1]?.value.toFixed(2) }}{{ history?.unit }}
           </span>
@@ -187,13 +187,13 @@ watch(() => props.history, () => {
   margin-bottom: 8px;
 }
 
-.param-name {
+.sensor-name {
   font-size: 12px;
   font-weight: 600;
   color: #e2e8f0;
 }
 
-.param-unit {
+.sensor-unit {
   font-size: 10px;
   color: #64748b;
   background: rgba(30, 58, 95, 0.4);

@@ -100,7 +100,6 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `id` | string | 是 | 前端展示用ID，如 `pool-1` |
 | `code` | string | 是 | 水池编码，如 `P-001` |
 | `name` | string | 是 | 水池名称，如 "集水池" |
-| `type` | string | 是 | 水池类型，见下表 |
 | `capacity` | number | 是 | 总容量(m³) |
 | `maxLevel` | number | 是 | 最大水位(m) |
 | `highLevel` | number | 是 | 高液位警戒值(m) |
@@ -108,23 +107,8 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `currentLevel` | number | 是 | 当前水位(m) |
 | `flowRate` | number | 是 | 当前流量(m³/h) |
 | `status` | string | 是 | 运行状态：`normal`/`warning`/`danger` |
-| `position` | object | 否 | 拓扑图坐标 `{x, y}` |
 | `devices` | array | 否 | 设备列表，见 [Device](#device设备) |
-| `parameters` | array | 否 | 监测参数列表，见 [Parameter](#parameter参数) |
-
-**水池类型枚举：**
-
-| 值 | 说明 |
-|----|------|
-| `collection` | 集水池 |
-| `grating` | 格栅渠 |
-| `regulation` | 调节池 |
-| `anaerobic` | 厌氧池 |
-| `anoxic` | 缺氧池 |
-| `aerobic` | 好氧池 |
-| `membrane` | 膜池 |
-| `disinfection` | 消毒池 |
-| `sludge` | 污泥浓缩池 |
+| `sensors` | array | 否 | 传感器监测数据列表，见 [Sensor](#sensor传感器) |
 
 ### Device（设备）
 
@@ -133,8 +117,8 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `id` | string | 是 | 设备唯一标识，如 `d-1-1` |
 | `name` | string | 是 | 设备名称，如 "进水泵1#" |
 | `type` | string | 是 | 设备类型，见下表 |
-| `status` | string | 是 | 运行状态：`running`/`stopped`/`fault` |
-| `runtime` | integer | 是 | 累计运行时长(分钟) |
+| `status` | string | 是 | 运行状态：`running`/`stopped`/`fault`/`offline` |
+| `statusTime` | string | 是 | 状态更新时间(ISO 8601) |
 
 **设备类型枚举：**
 
@@ -151,17 +135,16 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `sensor` | 传感器 |
 | `dehydrator` | 脱水机 |
 
-### Parameter（参数）
+### Sensor（传感器）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `id` | string | 是 | 参数唯一标识，如 `p-1-1` |
-| `name` | string | 是 | 参数名称，如 "液位" |
+| `id` | string | 是 | 传感器唯一标识，如 `p-1-1` |
+| `name` | string | 是 | 传感器名称，如 "液位" |
 | `value` | number | 是 | 当前数值 |
 | `unit` | string | 是 | 单位，如 `m`、`mg/L` |
-| `min` | number | 是 | 最小值 |
-| `max` | number | 是 | 最大值 |
-| `normalRange` | array | 是 | 正常范围 `[最小值, 最大值]` |
+| `min` | number | 是 | 正常范围下限 |
+| `max` | number | 是 | 正常范围上限 |
 
 ### FlowPath（水流路径）
 
@@ -181,10 +164,11 @@ Token 通过登录接口获取，有效期默认 24 小时。
 |------|------|------|------|
 | `id` | string | 是 | 告警唯一标识 |
 | `poolId` | string | 是 | 关联水池ID |
+| `poolName` | string | 是 | 关联水池名称 |
 | `level` | string | 是 | 告警级别：`warning`/`danger` |
 | `message` | string | 是 | 告警内容描述 |
 | `timestamp` | string | 是 | 告警发生时间（ISO 8601格式） |
-| `acknowledged` | boolean | 是 | 是否已确认 |
+| `status` | string | 是 | 告警处理状态：`unack`-未确认, `ack`-已确认 |
 
 ### DataPoint（时序数据点）
 
@@ -293,7 +277,7 @@ Token 通过登录接口获取，有效期默认 24 小时。
 #### 4. 获取所有水池列表
 
 - **接口**: `GET /pools`
-- **说明**: 获取所有水池完整信息，包括设备列表和监测参数。用于 Dashboard 拓扑图展示和右侧数据面板。
+- **说明**: 获取所有水池完整信息，包括设备列表和传感器监测数据。用于 Dashboard 拓扑图展示和右侧数据面板。
 - **认证**: 需要
 
 **响应数据：** `Pool[]` 数组
@@ -309,7 +293,6 @@ Token 通过登录接口获取，有效期默认 24 小时。
       "id": "pool-1",
       "code": "P-001",
       "name": "集水池",
-      "type": "collection",
       "capacity": 800,
       "maxLevel": 5.0,
       "highLevel": 4.5,
@@ -317,25 +300,23 @@ Token 通过登录接口获取，有效期默认 24 小时。
       "currentLevel": 3.25,
       "flowRate": 120.5,
       "status": "normal",
-      "position": { "x": 80, "y": 80 },
       "devices": [
         {
           "id": "d-1-1",
           "name": "进水泵1#",
           "type": "pump",
           "status": "running",
-          "runtime": 1200
+          "statusTime": "2026-06-09T14:30:00Z"
         }
       ],
-      "parameters": [
+      "sensors": [
         {
           "id": "p-1-1",
           "name": "液位",
           "value": 3.25,
           "unit": "m",
-          "min": 0,
-          "max": 5.0,
-          "normalRange": [0.5, 4.5]
+          "min": 0.5,
+          "max": 4.5
         }
       ]
     }
@@ -380,7 +361,7 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | `poolId` | string | 否 | - | 水池ID筛选 |
-| `status` | string | 否 | - | 设备状态：`running`/`stopped`/`fault` |
+| `status` | string | 否 | - | 设备状态：`running`/`stopped`/`fault`/`offline` |
 | `page` | integer | 否 | 1 | 页码 |
 | `size` | integer | 否 | 20 | 每页大小 |
 
@@ -575,14 +556,14 @@ Token 通过登录接口获取，有效期默认 24 小时。
 #### 13. 查询传感器历史数据
 
 - **接口**: `GET /history/sensor/{sensorId}`
-- **说明**: 查询指定传感器的历史数据，用于参数趋势图展示。默认返回最近 24 小时数据。
+- **说明**: 查询指定传感器的历史数据，用于传感器趋势图展示。默认返回最近 24 小时数据。
 - **认证**: 需要
 
 **路径参数：**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `sensorId` | string | 是 | 传感器/参数ID，如 `p-1-1` |
+| `sensorId` | string | 是 | 传感器ID，如 `p-1-1` |
 
 **查询参数：**
 
@@ -760,46 +741,9 @@ Token 通过登录接口获取，有效期默认 24 小时。
 
 ---
 
-### 七、流程路径
+### 七、MQTT消息
 
-#### 18. 获取水流路径列表
-
-- **接口**: `GET /flow-paths`
-- **说明**: 获取所有水池之间的水流路径信息。用于 Dashboard 拓扑图连线展示。
-- **认证**: 需要
-
-**响应数据：** `FlowPath[]` 数组
-
-**响应示例：**
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": [
-    {
-      "id": "f-1",
-      "from": "pool-1",
-      "to": "pool-2",
-      "type": "forward",
-      "active": true
-    },
-    {
-      "id": "f-2",
-      "from": "pool-2",
-      "to": "pool-3",
-      "type": "forward",
-      "active": true
-    }
-  ]
-}
-```
-
----
-
-### 八、MQTT消息
-
-#### 19. 发布MQTT消息（调试用）
+#### 18. 发布MQTT消息（调试用）
 
 - **接口**: `POST /mqtt/publish`
 - **说明**: 手动发布 MQTT 消息到指定主题（仅管理员使用）
@@ -838,12 +782,12 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | 前端原 Mock 函数 | 替换为 API 接口 | 使用位置 |
 |------------------|----------------|----------|
 | `generateInitialPools()` | `GET /pools` | Dashboard 拓扑图 |
-| `generateFlowPaths()` | `GET /flow-paths` | Dashboard 连线 |
+| `generateFlowPaths()` | 前端静态配置 | Dashboard 连线 |
 | `updatePoolData()` | `GET /pools` (定时轮询) | Dashboard 数据更新 |
 | `checkAlarms()` | `GET /alarms/unack` | 告警表格 |
 | `acknowledgeAlarm()` | `PUT /alarms/{id}/ack` | 告警确认 |
 | `toggleDeviceStatus()` | `POST /devices/command` | 设备开关 |
-| `getParamHistory()` | `GET /history/sensor/{id}` | 参数趋势图 |
+| `getSensorHistory()` | `GET /history/sensor/{id}` | 传感器趋势图 |
 | 登录模拟 | `POST /auth/login` | LoginView |
 | 设备监控静态数据 | `GET /dashboard/monitor` | DeviceMonitor |
 | 进出水流量静态数据 | `GET /history/flow` | EfficiencyChart / GasChart |

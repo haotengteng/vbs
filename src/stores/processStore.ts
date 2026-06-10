@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { PoolData, FlowPath, Alarm, ParameterHistory } from '@/types';
+import type { PoolData, FlowPath, Alarm, SensorHistory } from '@/types';
 import { generateInitialPools, generateFlowPaths, updatePoolData, checkAlarms } from '@/utils/mockData';
 
 export const useProcessStore = defineStore('process', () => {
@@ -9,14 +9,14 @@ export const useProcessStore = defineStore('process', () => {
   const alarms = ref<Alarm[]>([]);
   const selectedPoolId = ref<string | null>(null);
   const isRunning = ref(true);
-  const paramHistories = ref<Map<string, ParameterHistory>>(new Map());
+  const sensorHistories = ref<Map<string, SensorHistory>>(new Map());
 
   const selectedPool = computed(() => {
     return pools.value.find((p) => p.id === selectedPoolId.value) || null;
   });
 
   const activeAlarms = computed(() => {
-    return alarms.value.filter((a) => !a.acknowledged);
+    return alarms.value.filter((a) => a.status === 'unack');
   });
 
   const warningCount = computed(() => {
@@ -30,31 +30,31 @@ export const useProcessStore = defineStore('process', () => {
   function updateData() {
     if (!isRunning.value) return;
     
-    // 记录参数历史
+    // 记录传感器历史
     pools.value.forEach((pool) => {
-      // 记录水池参数的历史
-      pool.parameters.forEach((param) => {
-        const key = `${pool.id}-${param.id}`;
-        const existing = paramHistories.value.get(key);
+      // 记录水池传感器的历史
+      pool.sensors.forEach((sensor) => {
+        const key = `${pool.id}-${sensor.id}`;
+        const existing = sensorHistories.value.get(key);
         const now = new Date();
         if (existing) {
-          existing.data.push({ timestamp: now, value: param.value });
+          existing.data.push({ timestamp: now, value: sensor.value });
           if (existing.data.length > 50) {
             existing.data.shift();
           }
         } else {
-          paramHistories.value.set(key, {
-            paramId: param.id,
-            paramName: param.name,
-            unit: param.unit,
-            data: [{ timestamp: now, value: param.value }],
+          sensorHistories.value.set(key, {
+            sensorId: sensor.id,
+            sensorName: sensor.name,
+            unit: sensor.unit,
+            data: [{ timestamp: now, value: sensor.value }],
           });
         }
       });
       
       // 记录当前水位的历史（用于折线图展示）
       const levelKey = `${pool.id}-level`;
-      const levelExisting = paramHistories.value.get(levelKey);
+      const levelExisting = sensorHistories.value.get(levelKey);
       const now = new Date();
       if (levelExisting) {
         levelExisting.data.push({ timestamp: now, value: pool.currentLevel });
@@ -62,9 +62,9 @@ export const useProcessStore = defineStore('process', () => {
           levelExisting.data.shift();
         }
       } else {
-        paramHistories.value.set(levelKey, {
-          paramId: 'level',
-          paramName: '当前水位',
+        sensorHistories.value.set(levelKey, {
+          sensorId: 'level',
+          sensorName: '当前水位',
           unit: 'm',
           data: [{ timestamp: now, value: pool.currentLevel }],
         });
@@ -76,8 +76,8 @@ export const useProcessStore = defineStore('process', () => {
     alarms.value = [...alarms.value, ...newAlarms].slice(-50);
   }
 
-  function getParamHistory(poolId: string, paramId: string): ParameterHistory | undefined {
-    return paramHistories.value.get(`${poolId}-${paramId}`);
+  function getSensorHistory(poolId: string, sensorId: string): SensorHistory | undefined {
+    return sensorHistories.value.get(`${poolId}-${sensorId}`);
   }
 
   function selectPool(id: string | null) {
@@ -87,7 +87,7 @@ export const useProcessStore = defineStore('process', () => {
   function acknowledgeAlarm(alarmId: string) {
     const alarm = alarms.value.find((a) => a.id === alarmId);
     if (alarm) {
-      alarm.acknowledged = true;
+      alarm.status = 'ack';
     }
   }
 
@@ -102,9 +102,10 @@ export const useProcessStore = defineStore('process', () => {
     if (!device) return;
     if (device.status === 'running') {
       device.status = 'stopped';
-    } else if (device.status === 'stopped') {
+    } else if (device.status === 'stopped' || device.status === 'offline' || device.status === 'fault') {
       device.status = 'running';
     }
+    device.statusTime = new Date();
   }
 
   return {
@@ -122,6 +123,6 @@ export const useProcessStore = defineStore('process', () => {
     acknowledgeAlarm,
     toggleRunning,
     toggleDeviceStatus,
-    getParamHistory,
+    getSensorHistory,
   };
 });

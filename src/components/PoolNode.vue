@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { PoolData } from '@/types';
+import { poolPositions } from '@/utils/mockData';
 import WaterLevel from './WaterLevel.vue';
 
 interface Props {
@@ -34,6 +35,8 @@ const levelPercent = computed(() => {
   return ((props.pool.currentLevel / props.pool.maxLevel) * 100).toFixed(1);
 });
 
+const position = computed(() => poolPositions[props.pool.id] ?? { x: 0, y: 0 });
+
 function handleClick() {
   emit('click', props.pool.id);
 }
@@ -44,8 +47,8 @@ function handleClick() {
     class="pool-node"
     :class="[statusClass, 'fade-in-up']"
     :style="{
-      left: `${pool.position.x}px`,
-      top: `${pool.position.y}px`,
+      left: `${position.x}px`,
+      top: `${position.y}px`,
       animationDelay: `${index * 0.15}s`,
       borderColor: statusColor,
     }"
