@@ -35,7 +35,23 @@ const levelPercent = computed(() => {
   return ((props.pool.currentLevel / props.pool.maxLevel) * 100).toFixed(1);
 });
 
+
+
 const position = computed(() => poolPositions[props.pool.id] ?? { x: 0, y: 0 });
+
+function getSensorLabel(name: string): string {
+  const map: Record<string, string> = {
+    '污泥浓度': '污泥',
+    'PH值': 'PH',
+    '跨膜压差': '压差',
+  };
+  return map[name] ?? name;
+}
+
+function formatUnit(unit: string): string {
+  if (unit === 'mg/L') return 'mg';
+  return unit;
+}
 
 function handleClick() {
   emit('click', props.pool.id);
@@ -70,18 +86,25 @@ function handleClick() {
 
       <div class="pool-data">
         <div class="data-row">
-          <span class="data-label">高液位</span>
-          <span class="data-value font-mono" style="color: #f59e0b">{{ (pool.maxLevel * 0.7).toFixed(1) }}m</span>
-        </div>
-        <div class="data-row">
           <span class="data-label">水位</span>
           <span class="data-value font-mono" :style="{ color: statusColor }">
             {{ pool.currentLevel.toFixed(2) }}m
           </span>
         </div>
-        <div class="data-row">
-          <span class="data-label">容量</span>
-          <span class="data-value font-mono">{{ pool.capacity }}m³</span>
+        <div
+          v-for="sensor in pool.sensors.filter((s) => s.name !== '液位')"
+          :key="sensor.id"
+          class="data-row"
+        >
+          <span class="data-label">{{ getSensorLabel(sensor.name) }}</span>
+          <span
+            class="data-value font-mono"
+            :style="{
+              color: sensor.value < sensor.min || sensor.value > sensor.max ? '#ef4444' : '#00d4ff',
+            }"
+          >
+            {{ sensor.value.toFixed(2) }}{{ formatUnit(sensor.unit) }}
+          </span>
         </div>
       </div>
     </div>
@@ -96,7 +119,7 @@ function handleClick() {
 <style scoped>
 .pool-node {
   position: absolute;
-  width: 200px;
+  width: 240px;
   background: linear-gradient(135deg, #132238 0%, #0f1d32 100%);
   border: 2px solid #1e3a5f;
   border-radius: 12px;

@@ -7,11 +7,30 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+  timeRangeChange: [hours: number];
+}>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const chartContainerRef = ref<HTMLDivElement | null>(null);
 
 const hasData = computed(() => props.history !== null && props.history.data.length > 0);
+
+const timeRange = ref(3);
+const timeOptions = [
+  { label: '3小时', value: 3 },
+  { label: '6小时', value: 6 },
+  { label: '12小时', value: 12 },
+  { label: '24小时', value: 24 },
+  { label: '3天', value: 72 },
+  { label: '6天', value: 144 },
+  { label: '12天', value: 288 },
+];
+
+function onTimeChange(hours: number) {
+  timeRange.value = hours;
+  emit('timeRangeChange', hours);
+}
 
 function drawChart() {
   const canvas = canvasRef.value;
@@ -123,16 +142,26 @@ function drawChart() {
     });
   }
 
-  // X轴时间标签
+  // X轴时间标签 - 固定6个均匀分布的刻度
   if (data.length > 0) {
-    const timeLabels = data.length > 5 
-      ? [0, Math.floor(data.length / 2), data.length - 1]
-      : data.map((_, i) => i);
-    
+    const timeLabels: number[] = [];
+    const maxIndex = data.length - 1;
+    for (let i = 0; i < 6; i++) {
+      const idx = Math.round((maxIndex / 5) * i);
+      if (!timeLabels.includes(idx)) {
+        timeLabels.push(idx);
+      }
+    }
+
+    const spanMs = data[data.length - 1].timestamp.getTime() - data[0].timestamp.getTime();
+    const showDate = spanMs > 24 * 60 * 60 * 1000;
+
     timeLabels.forEach((index) => {
       const x = padding.left + (chartWidth / (data.length - 1)) * index;
       const time = data[index].timestamp;
-      const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+      const timeStr = showDate
+        ? `${time.getMonth() + 1}/${time.getDate()} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`
+        : `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
 
       ctx.fillStyle = '#64748b';
       ctx.font = '9px Roboto Mono, monospace';
@@ -160,6 +189,17 @@ watch(() => props.history, () => {
           <span class="current-value-mini">
             当前: {{ history?.data[history.data.length - 1]?.value.toFixed(2) }}{{ history?.unit }}
           </span>
+        </div>
+        <div class="time-selector">
+          <button
+            v-for="opt in timeOptions"
+            :key="opt.value"
+            class="time-btn"
+            :class="{ active: timeRange === opt.value }"
+            @click="onTimeChange(opt.value)"
+          >
+            {{ opt.label }}
+          </button>
         </div>
         <canvas ref="canvasRef" class="chart-canvas"></canvas>
       </div>
@@ -230,9 +270,38 @@ watch(() => props.history, () => {
   margin-top: 0;
 }
 
+.time-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.time-btn {
+  background: rgba(30, 58, 95, 0.4);
+  border: 1px solid rgba(30, 58, 95, 0.6);
+  color: #94a3b8;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-btn:hover {
+  background: rgba(30, 58, 95, 0.6);
+  color: #e2e8f0;
+}
+
+.time-btn.active {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+}
+
 .chart-expand-enter-to,
 .chart-expand-leave-from {
   opacity: 1;
-  max-height: 220px;
+  max-height: 260px;
 }
 </style>

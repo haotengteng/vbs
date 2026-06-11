@@ -1,4 +1,4 @@
-import type { PoolData, FlowPath, Alarm, DeviceStatusHistory } from '@/types';
+import type { PoolData, FlowPath, Alarm, DeviceStatusHistory, SensorHistory } from '@/types';
 
 const poolConfigs: {
   id: string;
@@ -24,14 +24,14 @@ const poolConfigs: {
 /** 前端维护的水池拓扑图位置坐标 */
 export const poolPositions: Record<string, { x: number; y: number }> = {
   'pool-1': { x: 80, y: 80 },
-  'pool-2': { x: 340, y: 80 },
-  'pool-3': { x: 600, y: 80 },
-  'pool-4': { x: 600, y: 300 },
-  'pool-5': { x: 340, y: 300 },
-  'pool-6': { x: 340, y: 520 },
-  'pool-7': { x: 600, y: 520 },
-  'pool-8': { x: 860, y: 520 },
-  'pool-9': { x: 860, y: 300 },
+  'pool-2': { x: 400, y: 80 },
+  'pool-3': { x: 720, y: 80 },
+  'pool-4': { x: 720, y: 300 },
+  'pool-5': { x: 400, y: 300 },
+  'pool-6': { x: 400, y: 520 },
+  'pool-7': { x: 720, y: 520 },
+  'pool-8': { x: 1040, y: 520 },
+  'pool-9': { x: 1040, y: 300 },
 };
 
 function randomInRange(min: number, max: number): number {
@@ -179,6 +179,43 @@ export function generateInitialPools(): PoolData[] {
       sensors,
     };
   });
+}
+
+export function generateSensorHistory(
+  sensorId: string,
+  sensorName: string,
+  unit: string,
+  currentValue: number,
+  min: number,
+  max: number,
+  hours: number = 3
+): SensorHistory {
+  const data: SensorHistory['data'] = [];
+  const now = new Date();
+  const pointsCount = Math.max(hours * 12, 2); // 每5分钟一个点，至少2个点
+  const range = max - min || 1;
+
+  let value = currentValue;
+
+  for (let i = pointsCount - 1; i >= 0; i--) {
+    const timestamp = new Date(now.getTime() - i * 5 * 60 * 1000);
+    // 随机游走模拟传感器波动
+    const fluctuation = randomInRange(-range * 0.05, range * 0.05);
+    value = Math.max(min - range * 0.2, Math.min(max + range * 0.2, value + fluctuation));
+    data.push({ timestamp, value: Number(value.toFixed(3)) });
+  }
+
+  // 确保最后一个点匹配当前值
+  if (data.length > 0) {
+    data[data.length - 1].value = currentValue;
+  }
+
+  return {
+    sensorId,
+    sensorName,
+    unit,
+    data,
+  };
 }
 
 export function generateDeviceStatusHistory(

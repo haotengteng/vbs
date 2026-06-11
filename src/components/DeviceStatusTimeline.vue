@@ -9,6 +9,25 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+  timeRangeChange: [hours: number];
+}>();
+
+const timeRange = ref(3);
+const timeOptions = [
+  { label: '3小时', value: 3 },
+  { label: '6小时', value: 6 },
+  { label: '12小时', value: 12 },
+  { label: '24小时', value: 24 },
+  { label: '3天', value: 72 },
+  { label: '6天', value: 144 },
+  { label: '12天', value: 288 },
+];
+
+function onTimeChange(hours: number) {
+  timeRange.value = hours;
+  emit('timeRangeChange', hours);
+}
 
 const hoverRecord = ref<DeviceStatusRecord | null>(null);
 const tooltipPos = ref({ x: 0, y: 0 });
@@ -109,6 +128,17 @@ function updateTooltipPos(event: MouseEvent) {
     </div>
 
     <template v-else>
+      <div class="time-selector">
+        <button
+          v-for="opt in timeOptions"
+          :key="opt.value"
+          class="time-btn"
+          :class="{ active: timeRange === opt.value }"
+          @click="onTimeChange(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
       <div class="timeline-header">
         <span class="time-label">{{ formatTime(startTime!) }}</span>
         <span class="time-label">{{ formatTime(endTime!) }}</span>
@@ -305,6 +335,35 @@ function updateTooltipPos(event: MouseEvent) {
 .tooltip-enter-active,
 .tooltip-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.time-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.time-btn {
+  background: rgba(30, 58, 95, 0.4);
+  border: 1px solid rgba(30, 58, 95, 0.6);
+  color: #94a3b8;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-btn:hover {
+  background: rgba(30, 58, 95, 0.6);
+  color: #e2e8f0;
+}
+
+.time-btn.active {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
 }
 
 .tooltip-enter-from,

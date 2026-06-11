@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue';
 import { useProcessStore } from '@/stores/processStore';
 import DeviceStatusTimeline from './DeviceStatusTimeline.vue';
+import DeviceIcon from './DeviceIcon.vue';
 import type { DeviceStatusHistory } from '@/types';
-import { X, Activity, Settings, Database } from '@lucide/vue';
+import { X, Settings, Database } from '@lucide/vue';
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ const store = useProcessStore();
 
 const activeDeviceId = ref<string | null>(null);
 const selectedDeviceHistory = ref<DeviceStatusHistory | null>(null);
+const selectedDeviceTimeRange = ref(3);
 
 const allDevices = computed(() => {
   const devices: Array<{
@@ -137,16 +139,6 @@ function getStatusClass(status: string): string {
   }
 }
 
-function getDeviceIcon(type: string) {
-  switch (type) {
-    case 'pump':
-    case 'blower':
-      return Activity;
-    default:
-      return Settings;
-  }
-}
-
 function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: string, poolName: string) {
   // 如果点击的是当前已展开的设备，则关闭
   if (activeDeviceId.value === deviceId) {
@@ -154,9 +146,9 @@ function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: strin
     selectedDeviceHistory.value = null;
     return;
   }
-  
+
   activeDeviceId.value = deviceId;
-  const history = store.getDeviceStatusHistory(poolId, deviceId);
+  const history = store.getDeviceStatusHistory(poolId, deviceId, selectedDeviceTimeRange.value);
   if (history) {
     selectedDeviceHistory.value = history;
   } else {
@@ -167,6 +159,19 @@ function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: strin
       poolName,
       records: [],
     };
+  }
+}
+
+function onDeviceTimeRangeChange(hours: number) {
+  selectedDeviceTimeRange.value = hours;
+  if (activeDeviceId.value) {
+    const device = allDevices.value.find((d) => d.id === activeDeviceId.value);
+    if (device) {
+      const history = store.getDeviceStatusHistory(device.poolId, activeDeviceId.value, hours);
+      if (history) {
+        selectedDeviceHistory.value = history;
+      }
+    }
   }
 }
 </script>
@@ -208,7 +213,7 @@ function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: strin
                   @click="toggleDeviceHistory(device.id, device.name, device.poolId, device.poolName)"
                 >
                   <span class="col-id">
-                    <component :is="getDeviceIcon(device.type)" :size="14" class="row-icon" />
+                    <DeviceIcon :type="device.type" :status="device.status" :size="16" />
                     {{ device.id }}
                   </span>
                   <span class="col-name">{{ device.name }}</span>
@@ -231,6 +236,7 @@ function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: strin
                     </div>
                     <DeviceStatusTimeline
                       :history="selectedDeviceHistory"
+                      @time-range-change="onDeviceTimeRangeChange"
                     />
                   </div>
                 </Transition>
@@ -402,7 +408,6 @@ function toggleDeviceHistory(deviceId: string, deviceName: string, poolId: strin
 }
 
 .row-icon {
-  color: #00d4ff;
   flex-shrink: 0;
 }
 

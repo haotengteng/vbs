@@ -10,7 +10,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const POOL_WIDTH = 200;
+const POOL_WIDTH = 240;
 const POOL_HEIGHT = 140;
 
 const poolMap = computed(() => {

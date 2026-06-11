@@ -4,6 +4,7 @@ import type { PoolData, SensorHistory, DeviceStatusHistory } from '@/types';
 import { useProcessStore } from '@/stores/processStore';
 import SensorHistoryChart from './SensorHistoryChart.vue';
 import DeviceStatusTimeline from './DeviceStatusTimeline.vue';
+import DeviceIcon from './DeviceIcon.vue';
 import { X, Activity, Droplets, Settings, Database, Gauge } from '@lucide/vue';
 
 interface Props {
@@ -20,6 +21,8 @@ const selectedSensor = ref<SensorHistory | null>(null);
 const activeSensorId = ref<string | null>(null);
 const selectedDeviceHistory = ref<DeviceStatusHistory | null>(null);
 const activeDeviceId = ref<string | null>(null);
+const selectedSensorTimeRange = ref(3);
+const selectedDeviceTimeRange = ref(3);
 
 const isOpen = computed(() => props.pool !== null);
 
@@ -113,16 +116,16 @@ function formatStatusTime(date: Date): string {
 
 function toggleSensorHistory(sensorId: string, sensorName: string, unit: string) {
   if (!props.pool) return;
-  
+
   // 如果点击的是当前已展开的传感器，则关闭
   if (activeSensorId.value === sensorId) {
     activeSensorId.value = null;
     selectedSensor.value = null;
     return;
   }
-  
+
   activeSensorId.value = sensorId;
-  const history = store.getSensorHistory(props.pool.id, sensorId);
+  const history = store.getSensorHistory(props.pool.id, sensorId, selectedSensorTimeRange.value);
   if (history && history.data.length > 0) {
     selectedSensor.value = history;
   } else {
@@ -135,18 +138,28 @@ function toggleSensorHistory(sensorId: string, sensorName: string, unit: string)
   }
 }
 
+function onSensorTimeRangeChange(hours: number) {
+  selectedSensorTimeRange.value = hours;
+  if (activeSensorId.value && props.pool) {
+    const history = store.getSensorHistory(props.pool.id, activeSensorId.value, hours);
+    if (history && history.data.length > 0) {
+      selectedSensor.value = history;
+    }
+  }
+}
+
 function toggleDeviceHistory(deviceId: string, deviceName: string) {
   if (!props.pool) return;
-  
+
   // 如果点击的是当前已展开的设备，则关闭
   if (activeDeviceId.value === deviceId) {
     activeDeviceId.value = null;
     selectedDeviceHistory.value = null;
     return;
   }
-  
+
   activeDeviceId.value = deviceId;
-  const history = store.getDeviceStatusHistory(props.pool.id, deviceId);
+  const history = store.getDeviceStatusHistory(props.pool.id, deviceId, selectedDeviceTimeRange.value);
   if (history) {
     selectedDeviceHistory.value = history;
   } else {
@@ -157,6 +170,16 @@ function toggleDeviceHistory(deviceId: string, deviceName: string) {
       poolName: props.pool.name,
       records: [],
     };
+  }
+}
+
+function onDeviceTimeRangeChange(hours: number) {
+  selectedDeviceTimeRange.value = hours;
+  if (activeDeviceId.value && props.pool) {
+    const history = store.getDeviceStatusHistory(props.pool.id, activeDeviceId.value, hours);
+    if (history) {
+      selectedDeviceHistory.value = history;
+    }
   }
 }
 </script>
@@ -223,6 +246,7 @@ function toggleDeviceHistory(deviceId: string, deviceName: string) {
             <SensorHistoryChart
               v-if="selectedSensor && activeSensorId"
               :history="selectedSensor"
+              @time-range-change="onSensorTimeRangeChange"
             />
           </div>
 
@@ -241,11 +265,14 @@ function toggleDeviceHistory(deviceId: string, deviceName: string) {
                   @click="toggleDeviceHistory(device.id, device.name)"
                 >
                   <div class="device-info">
-                    <span class="device-name">{{ device.name }}</span>
-                    <span class="device-type">{{ device.type }}</span>
+                    <DeviceIcon :type="device.type" :status="device.status" :size="20" />
+                    <div class="device-text">
+                      <span class="device-name">{{ device.name }}</span>
+                      <span class="device-type">{{ device.type }}</span>
+                    </div>
                   </div>
                   <div class="device-status">
-                    <label class="device-switch" :class="{ disabled: device.status === 'fault' || device.status === 'offline' }">
+                    <label class="device-switch" :class="{ disabled: device.status === 'fault' || device.status === 'offline' }" @click.stop>
                       <input
                         type="checkbox"
                         :checked="device.status === 'running'"
@@ -268,6 +295,7 @@ function toggleDeviceHistory(deviceId: string, deviceName: string) {
                   <div v-if="activeDeviceId === device.id" class="device-history-container">
                     <DeviceStatusTimeline
                       :history="selectedDeviceHistory"
+                      @time-range-change="onDeviceTimeRangeChange"
                     />
                   </div>
                 </Transition>
@@ -498,6 +526,12 @@ function toggleDeviceHistory(deviceId: string, deviceName: string) {
 }
 
 .device-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-text {
   display: flex;
   flex-direction: column;
   gap: 2px;

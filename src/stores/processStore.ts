@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { PoolData, FlowPath, Alarm, SensorHistory, DeviceStatusHistory } from '@/types';
-import { generateInitialPools, generateFlowPaths, updatePoolData, checkAlarms, generateDeviceStatusHistory } from '@/utils/mockData';
+import { generateInitialPools, generateFlowPaths, updatePoolData, checkAlarms, generateDeviceStatusHistory, generateSensorHistory } from '@/utils/mockData';
 
 export const useProcessStore = defineStore('process', () => {
   const pools = ref<PoolData[]>(generateInitialPools());
@@ -131,26 +131,57 @@ export const useProcessStore = defineStore('process', () => {
     alarms.value = [...alarms.value, ...newAlarms].slice(-50);
   }
 
-  function getSensorHistory(poolId: string, sensorId: string): SensorHistory | undefined {
-    return sensorHistories.value.get(`${poolId}-${sensorId}`);
-  }
-
-  function getDeviceStatusHistory(poolId: string, deviceId: string): DeviceStatusHistory | undefined {
-    const key = `${poolId}-${deviceId}`;
-    let history = deviceStatusHistories.value.get(key);
-    
-    // 如果没有找到历史记录，尝试动态生成
-    if (!history) {
-      const pool = pools.value.find((p) => p.id === poolId);
-      if (pool) {
-        const device = pool.devices.find((d) => d.id === deviceId);
-        if (device) {
-          history = generateDeviceStatusHistory(device.id, device.name, pool.id, pool.name, device.status, 24);
-          deviceStatusHistories.value.set(key, history);
-        }
+  function getSensorHistory(poolId: string, sensorId: string, hours: number = 3): SensorHistory | undefined {
+    const key = `${poolId}-${sensorId}`;
+    const existing = sensorHistories.value.get(key);
+    if (existing && existing.data.length > 0) {
+      const firstTime = existing.data[0].timestamp.getTime();
+      const lastTime = existing.data[existing.data.length - 1].timestamp.getTime();
+      const cacheHours = (lastTime - firstTime) / (1000 * 60 * 60);
+      if (cacheHours >= hours) {
+        return existing;
       }
     }
-    
+
+    const pool = pools.value.find((p) => p.id === poolId);
+    if (!pool) return undefined;
+
+    if (sensorId === 'level') {
+      const history = generateSensorHistory('level', '当前水位', 'm', pool.currentLevel, 0.5, pool.maxLevel * 0.9, hours);
+      sensorHistories.value.set(key, history);
+      return history;
+    }
+
+    const sensor = pool.sensors.find((s) => s.id === sensorId);
+    if (!sensor) return undefined;
+
+    const history = generateSensorHistory(sensor.id, sensor.name, sensor.unit, sensor.value, sensor.min, sensor.max, hours);
+    sensorHistories.value.set(key, history);
+    return history;
+  }
+
+  function getDeviceStatusHistory(poolId: string, deviceId: string, hours: number = 3): DeviceStatusHistory | undefined {
+    const key = `${poolId}-${deviceId}`;
+    let history = deviceStatusHistories.value.get(key);
+
+    if (history && history.records.length > 0) {
+      const firstTime = history.records[0].startTime.getTime();
+      const lastTime = history.records[history.records.length - 1].endTime.getTime();
+      const cacheHours = (lastTime - firstTime) / (1000 * 60 * 60);
+      if (cacheHours >= hours) {
+        return history;
+      }
+    }
+
+    const pool = pools.value.find((p) => p.id === poolId);
+    if (pool) {
+      const device = pool.devices.find((d) => d.id === deviceId);
+      if (device) {
+        history = generateDeviceStatusHistory(device.id, device.name, pool.id, pool.name, device.status, hours);
+        deviceStatusHistories.value.set(key, history);
+      }
+    }
+
     return history;
   }
 
