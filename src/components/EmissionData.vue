@@ -3,6 +3,10 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import PanelTitle from './PanelTitle.vue';
 import * as echarts from 'echarts';
 
+const emit = defineEmits<{
+  'open-device-modal': [status: 'running' | 'fault' | 'stopped' | 'offline' | 'all', category?: string];
+}>();
+
 interface DeviceCategory {
   name: string;
   value: number;
@@ -11,6 +15,18 @@ interface DeviceCategory {
 
 const runningDevices = ref(27);
 const faultDevices = ref(2);
+
+function handleStatusClick(status: 'running' | 'fault') {
+  emit('open-device-modal', status);
+}
+
+function handleCategoryClick(categoryName: string) {
+  emit('open-device-modal', 'all', categoryName);
+}
+
+function handleTotalClick() {
+  emit('open-device-modal', 'all');
+}
 
 const deviceCategories = ref<DeviceCategory[]>([
   { name: '缺氧池', value: 9, color: '#00d4ff' },
@@ -217,8 +233,8 @@ onUnmounted(() => {
     <PanelTitle title="设备状态" subtitle="STATUS" />
 
     <div class="device-status">
-      <div class="status-card">
-        <div class="flip-display">
+      <div class="status-card" @click="handleStatusClick('running')">
+        <div class="flip-display clickable">
           <span
             v-for="(digit, idx) in String(runningDevices).padStart(3, '0').split('')"
             :key="`run-${idx}`"
@@ -233,8 +249,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="status-card">
-        <div class="flip-display">
+      <div class="status-card" @click="handleStatusClick('fault')">
+        <div class="flip-display clickable">
           <span
             v-for="(digit, idx) in String(faultDevices).padStart(3, '0').split('')"
             :key="`fault-${idx}`"
@@ -259,8 +275,9 @@ onUnmounted(() => {
         <div
           v-for="item in deviceCategories.slice(0, 2)"
           :key="item.name"
-          class="stat-item left"
+          class="stat-item left clickable"
           :style="{ '--item-color': item.color }"
+          @click="handleCategoryClick(item.name)"
         >
           <div class="stat-value">
             <span class="num">{{ item.value }}</span>
@@ -276,7 +293,7 @@ onUnmounted(() => {
       <!-- 中间环图 -->
       <div class="chart-wrapper">
         <div ref="chartRef" class="chart-container"></div>
-        <div class="chart-center">
+        <div class="chart-center clickable" @click="handleTotalClick">
           <div class="center-value">{{ totalDevices }}</div>
           <div class="center-label">设备总数</div>
         </div>
@@ -287,8 +304,9 @@ onUnmounted(() => {
         <div
           v-for="item in deviceCategories.slice(2)"
           :key="item.name"
-          class="stat-item right"
+          class="stat-item right clickable"
           :style="{ '--item-color': item.color }"
+          @click="handleCategoryClick(item.name)"
         >
           <div class="stat-value">
             <span class="num">{{ item.value }}</span>
@@ -495,5 +513,30 @@ onUnmounted(() => {
   font-size: 11px;
   color: #a0beeb;
   margin-top: 2px;
+}
+
+/* 可点击元素交互样式 */
+.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-card.clickable:hover .flip-digit {
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
+}
+
+.stat-item.clickable:hover .stat-value .num {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--item-color, #00d4ff) 70%, transparent);
+}
+
+.chart-center.clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.chart-center.clickable:hover .center-value {
+  color: #00d4ff;
+  text-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
 }
 </style>

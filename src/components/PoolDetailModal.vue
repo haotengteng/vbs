@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { PoolData, SensorHistory } from '@/types';
+import type { PoolData, SensorHistory, DeviceStatusHistory } from '@/types';
 import { useProcessStore } from '@/stores/processStore';
 import SensorHistoryChart from './SensorHistoryChart.vue';
+import DeviceStatusTimeline from './DeviceStatusTimeline.vue';
 import { X, Activity, Droplets, Settings, Database, Gauge } from '@lucide/vue';
 
 interface Props {
@@ -17,6 +18,8 @@ const emit = defineEmits<{
 const store = useProcessStore();
 const selectedSensor = ref<SensorHistory | null>(null);
 const activeSensorId = ref<string | null>(null);
+const selectedDeviceHistory = ref<DeviceStatusHistory | null>(null);
+const activeDeviceId = ref<string | null>(null);
 
 const isOpen = computed(() => props.pool !== null);
 
@@ -47,11 +50,14 @@ const statusColor = computed(() => {
 // 静态配置传感器
 const staticParams = computed(() => {
   if (!props.pool) return [];
+  const levelSensor = props.pool.sensors.find((s) => s.name === '液位');
+  const highLevel = levelSensor?.max ?? props.pool.maxLevel * 0.9;
+  const lowLevel = levelSensor?.min ?? 0.5;
   return [
     { label: '总容量', value: `${props.pool.capacity}m³`, icon: Database },
     { label: '最大水位', value: `${props.pool.maxLevel}m`, icon: Droplets, color: '#ef4444' },
-    { label: '高液位警戒', value: `${props.pool.highLevel}m`, color: '#f59e0b' },
-    { label: '低液位警戒', value: `${props.pool.lowLevel}m`, color: '#f59e0b' },
+    { label: '高液位警戒', value: `${highLevel}m`, color: '#f59e0b' },
+    { label: '低液位警戒', value: `${lowLevel}m`, color: '#f59e0b' },
   ];
 });
 
@@ -128,6 +134,31 @@ function toggleSensorHistory(sensorId: string, sensorName: string, unit: string)
     };
   }
 }
+
+function toggleDeviceHistory(deviceId: string, deviceName: string) {
+  if (!props.pool) return;
+  
+  // 如果点击的是当前已展开的设备，则关闭
+  if (activeDeviceId.value === deviceId) {
+    activeDeviceId.value = null;
+    selectedDeviceHistory.value = null;
+    return;
+  }
+  
+  activeDeviceId.value = deviceId;
+  const history = store.getDeviceStatusHistory(props.pool.id, deviceId);
+  if (history) {
+    selectedDeviceHistory.value = history;
+  } else {
+    selectedDeviceHistory.value = {
+      deviceId,
+      deviceName,
+      poolId: props.pool.id,
+      poolName: props.pool.name,
+      records: [],
+    };
+  }
+}
 </script>
 
 <template>
@@ -200,36 +231,47 @@ function toggleSensorHistory(sensorId: string, sensorName: string, unit: string)
             <h3 class="section-title">
               <Settings :size="16" />
               设备状态
+              <span class="hint">点击设备查看状态历史</span>
             </h3>
             <div class="devices-list">
-              <div
-                v-for="device in pool?.devices"
-                :key="device.id"
-                class="device-item"
-              >
-                <div class="device-info">
-                  <span class="device-name">{{ device.name }}</span>
-                  <span class="device-type">{{ device.type }}</span>
+              <template v-for="device in pool?.devices" :key="device.id">
+                <div
+                  class="device-item"
+                  :class="{ active: activeDeviceId === device.id }"
+                  @click="toggleDeviceHistory(device.id, device.name)"
+                >
+                  <div class="device-info">
+                    <span class="device-name">{{ device.name }}</span>
+                    <span class="device-type">{{ device.type }}</span>
+                  </div>
+                  <div class="device-status">
+                    <label class="device-switch" :class="{ disabled: device.status === 'fault' || device.status === 'offline' }">
+                      <input
+                        type="checkbox"
+                        :checked="device.status === 'running'"
+                        :disabled="device.status === 'fault' || device.status === 'offline'"
+                        @change.stop="store.toggleDeviceStatus(pool!.id, device.id)"
+                      />
+                      <span class="switch-slider"></span>
+                    </label>
+                    <span
+                      class="status-tag"
+                      :class="device.status"
+                    >
+                      {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : device.status === 'offline' ? '离线' : '故障' }}
+                    </span>
+                    <span class="status-time">{{ formatStatusTime(device.statusTime) }}</span>
+                  </div>
                 </div>
-                <div class="device-status">
-                  <label class="device-switch" :class="{ disabled: device.status === 'fault' || device.status === 'offline' }">
-                    <input
-                      type="checkbox"
-                      :checked="device.status === 'running'"
-                      :disabled="device.status === 'fault' || device.status === 'offline'"
-                      @change="store.toggleDeviceStatus(pool!.id, device.id)"
+                <!-- 设备状态历史时间轴 -->
+                <Transition name="chart-expand">
+                  <div v-if="activeDeviceId === device.id" class="device-history-container">
+                    <DeviceStatusTimeline
+                      :history="selectedDeviceHistory"
                     />
-                    <span class="switch-slider"></span>
-                  </label>
-                  <span
-                    class="status-tag"
-                    :class="device.status"
-                  >
-                    {{ device.status === 'running' ? '运行' : device.status === 'stopped' ? '停止' : device.status === 'offline' ? '离线' : '故障' }}
-                  </span>
-                  <span class="status-time">{{ formatStatusTime(device.statusTime) }}</span>
-                </div>
-              </div>
+                  </div>
+                </Transition>
+              </template>
             </div>
           </div>
         </div>
@@ -566,6 +608,48 @@ function toggleSensorHistory(sensorId: string, sensorName: string, unit: string)
 
 .device-switch input:focus + .switch-slider {
   box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3);
+}
+
+.history-btn {
+  background: rgba(30, 58, 95, 0.4);
+  border: 1px solid rgba(30, 58, 95, 0.6);
+  color: #a0beeb;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.history-btn:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+}
+
+.device-item {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.device-item:hover {
+  background: rgba(30, 58, 95, 0.4);
+}
+
+.device-item.active {
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.device-history-container {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 12px;
+  background: rgba(15, 29, 50, 0.6);
+  border: 1px solid rgba(30, 58, 95, 0.5);
+  border-radius: 8px;
 }
 
 .modal-enter-active,

@@ -11,6 +11,22 @@ servers:
   - url: http://localhost:8080/api
     description: 本地开发环境
 
+tags:
+  - name: 认证管理
+    description: 用户登录、登出、Token 刷新等认证相关接口
+  - name: 水池管理
+    description: 水池信息查询、列表获取等接口
+  - name: 设备管理
+    description: 设备信息查询、列表获取、设备控制等接口
+  - name: 告警管理
+    description: 告警查询、确认、统计等接口
+  - name: 历史数据
+    description: 传感器历史数据、设备状态历史查询接口
+  - name: 仪表盘统计
+    description: 仪表盘统计数据、实时监控数据接口
+  - name: MQTT 消息
+    description: MQTT 消息发布接口（调试用）
+
 # ==================== 安全认证 ====================
 security:
   - BearerAuth: []
@@ -87,14 +103,6 @@ components:
           type: number
           description: 最大水位(m)
           example: 5.0
-        highLevel:
-          type: number
-          description: 高液位警戒值(m)
-          example: 4.5
-        lowLevel:
-          type: number
-          description: 低液位警戒值(m)
-          example: 0.5
         currentLevel:
           type: number
           description: 当前水位(m)
@@ -117,7 +125,7 @@ components:
           items:
             $ref: '#/components/schemas/Sensor'
       required:
-        - id, code, name, type, capacity, maxLevel, currentLevel, status
+        - id, code, name, capacity, maxLevel, currentLevel, status
 
     Device:
       type: object
@@ -398,14 +406,6 @@ components:
           type: integer
           description: 故障设备数
           example: 2
-        activeAlarms:
-          type: integer
-          description: 活跃告警数
-          example: 3
-        totalFlowRate:
-          type: number
-          description: 总流量(m³/h)
-          example: 856.5
         deviceCategories:
           type: array
           description: 各水池设备分布
@@ -418,24 +418,99 @@ components:
               value:
                 type: integer
                 example: 9
-              color:
-                type: string
-                example: '#00d4ff'
 
-    InOutFlowData:
+    MonitorItem:
       type: object
-      description: 进出水流量时序数据
+      description: 实时监控项
       properties:
-        inlet:
-          type: array
-          description: 进水流量数据
-          items:
-            $ref: '#/components/schemas/DataPoint'
-        outlet:
-          type: array
-          description: 出水流量数据
-          items:
-            $ref: '#/components/schemas/DataPoint'
+        label:
+          type: string
+          description: 监控项名称
+          example: "膜池液位"
+        value:
+          type: string
+          description: 当前值
+          example: "1.08"
+        unit:
+          type: string
+          description: 单位
+          example: "m"
+        status:
+          type: string
+          description: 状态
+          enum: [normal, warning, danger]
+          example: normal
+        icon:
+          type: string
+          description: 图标标识
+          example: gauge
+      required:
+        - label, value, unit, status, icon
+
+    AlarmStats:
+      type: object
+      description: 告警统计
+      properties:
+        warning:
+          type: integer
+          description: 警告级别告警数
+          example: 5
+        danger:
+          type: integer
+          description: 危险级别告警数
+          example: 2
+        total:
+          type: integer
+          description: 告警总数
+          example: 7
+      required:
+        - warning, danger, total
+
+    DeviceHistoryRecord:
+      type: object
+      description: 设备状态历史记录
+      properties:
+        createTime:
+          type: string
+          format: date-time
+          description: 状态变化时间
+          example: "2024-06-08T14:00:00+08:00"
+        status:
+          type: string
+          description: 设备状态
+          enum: [running, stopped, fault, offline]
+          example: running
+        operation:
+          type: string
+          description: 操作人
+          example: "张三"
+        terminal:
+          type: string
+          description: 操作终端
+          example: "小程序"
+      required:
+        - createTime, status
+
+    MqttPublishRequest:
+      type: object
+      description: MQTT 发布请求
+      properties:
+        topic:
+          type: string
+          description: MQTT 主题
+          example: "swims/control/d-1-1"
+        payload:
+          type: string
+          description: 消息内容（JSON 字符串）
+          example: '{"operation":"start"}'
+        qos:
+          type: integer
+          description: QoS 等级
+          enum: [0, 1, 2]
+          default: 1
+          example: 1
+      required:
+        - topic, payload
 
   # ==================== 错误响应 ====================
   responses:
@@ -620,8 +695,6 @@ paths:
                     name: 集水池
                     capacity: 800
                     maxLevel: 5.0
-                    highLevel: 4.5
-                    lowLevel: 0.5
                     currentLevel: 3.25
                     flowRate: 120.5
                     status: normal
@@ -691,7 +764,7 @@ paths:
           description: 设备状态筛选（可选）
           schema:
             type: string
-            enum: [running, stopped, fault]
+            enum: [running, stopped, fault, offline]
           example: running
         - name: page
           in: query
@@ -919,17 +992,14 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          warning:
-                            type: integer
-                            example: 5
-                          danger:
-                            type: integer
-                            example: 2
-                          total:
-                            type: integer
-                            example: 7
+                        $ref: '#/components/schemas/AlarmStats'
+              example:
+                code: 200
+                message: success
+                data:
+                  warning: 5
+                  danger: 2
+                  total: 7
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -999,13 +1069,13 @@ paths:
         - name: deviceId
           in: path
           required: true
-          description: 设备ID
+          description: 设备 ID
           schema:
             type: string
           example: d-1-1
         - name: hours
           in: query
-          description: 查询时间范围（小时），默认24
+          description: 查询时间范围（小时），默认 24
           schema:
             type: integer
             default: 24
@@ -1023,62 +1093,21 @@ paths:
                       data:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            timestamp:
-                              type: string
-                              format: date-time
-                            status:
-                              type: string
-                              enum: [running, stopped, fault]
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /history/flow:
-    get:
-      tags:
-        - 历史数据
-      summary: 查询进出水流量历史
-      description: |
-        查询系统整体进出水流量历史数据。
-        用于Dashboard底部效率图表和气体图表展示。
-      parameters:
-        - name: hours
-          in: query
-          description: 查询时间范围（小时），默认24
-          schema:
-            type: integer
-            default: 24
-          example: 24
-      responses:
-        '200':
-          description: 查询成功
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/InOutFlowData'
+                          $ref: '#/components/schemas/DeviceHistoryRecord'
               example:
                 code: 200
                 message: success
                 data:
-                  inlet:
-                    - timestamp: "2024-06-08T14:00:00+08:00"
-                      value: 120.5
-                    - timestamp: "2024-06-08T14:05:00+08:00"
-                      value: 118.3
-                  outlet:
-                    - timestamp: "2024-06-08T14:00:00+08:00"
-                      value: 115.2
-                    - timestamp: "2024-06-08T14:05:00+08:00"
-                      value: 112.8
+                  - createTime: "2024-06-08T14:00:00+08:00"
+                    status: running
+                    operation: "张三"
+                    terminal: "小程序"
+                  - createTime: "2024-06-08T14:30:00+08:00"
+                    status: stopped
+                    operation: "张三"
+                    terminal: "大屏"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
-
   # ========== 仪表盘统计接口 ==========
   /dashboard/stats:
     get:
@@ -1086,8 +1115,8 @@ paths:
         - 仪表盘统计
       summary: 获取仪表盘统计数据
       description: |
-        获取Dashboard右侧面板和顶部状态栏所需的统计数据。
-        包括设备运行状态、告警数量、流量统计等。
+        获取Dashboard右侧面板所需的统计数据。
+        包括水池总数、运行/故障设备数、各水池设备分布等。
       responses:
         '200':
           description: 查询成功
@@ -1107,15 +1136,11 @@ paths:
                   totalPools: 9
                   runningDevices: 27
                   faultDevices: 2
-                  activeAlarms: 3
-                  totalFlowRate: 856.5
                   deviceCategories:
                     - name: 缺氧池
                       value: 9
-                      color: '#00d4ff'
                     - name: 调节池
                       value: 12
-                      color: '#00ccff'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
@@ -1140,57 +1165,34 @@ paths:
                       data:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            label:
-                              type: string
-                              example: "膜池液位"
-                            value:
-                              type: string
-                              example: '1.08'
-                            unit:
-                              type: string
-                              example: m
-                            status:
-                              type: string
-                              enum: [normal, warning, danger]
-                              example: normal
-                            icon:
-                              type: string
-                              example: gauge
+                          $ref: '#/components/schemas/MonitorItem'
+              example:
+                code: 200
+                message: success
+                data:
+                  - label: "膜池液位"
+                    value: "1.08"
+                    unit: "m"
+                    status: normal
+                    icon: gauge
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
-  # ========== MQTT消息接口（内部使用） ==========
+  # ========== MQTT 消息接口（内部使用） ==========
   /mqtt/publish:
     post:
       tags:
-        - MQTT消息
-      summary: 发布MQTT消息（调试用）
-      description: 手动发布MQTT消息到指定主题
+        - MQTT 消息
+      summary: 发布 MQTT 消息（调试用）
+      description: |
+        手动发布 MQTT 消息到指定主题（仅管理员使用）。
+        用于调试和设备控制测试。
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                topic:
-                  type: string
-                  description: MQTT主题
-                  example: swims/control/d-1-1
-                payload:
-                  type: string
-                  description: 消息内容
-                  example: '{"operation":"start"}'
-                qos:
-                  type: integer
-                  description: QoS等级
-                  enum: [0, 1, 2]
-                  default: 1
-              required:
-                - topic
-                - payload
+              $ref: '#/components/schemas/MqttPublishRequest'
       responses:
         '200':
           description: 发布成功
@@ -1198,6 +1200,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 200
+                message: MQTT 消息发布成功
+                data: null
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':

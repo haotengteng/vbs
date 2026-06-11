@@ -4,8 +4,6 @@ export interface PoolData {
   name: string;
   capacity: number;
   maxLevel: number;
-  highLevel: number;
-  lowLevel: number;
   currentLevel: number;
   flowRate: number;
   status: 'normal' | 'warning' | 'danger';
@@ -62,4 +60,18 @@ export interface SensorHistory {
   sensorName: string;
   unit: string;
   data: DataPoint[];
+}
+
+export interface DeviceStatusRecord {
+  status: 'running' | 'stopped' | 'fault' | 'offline';
+  startTime: Date;
+  endTime: Date;
+}
+
+export interface DeviceStatusHistory {
+  deviceId: string;
+  deviceName: string;
+  poolId: string;
+  poolName: string;
+  records: DeviceStatusRecord[];
 }

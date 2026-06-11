@@ -6,6 +6,7 @@ import HeaderBar from '@/components/HeaderBar.vue';
 import PoolNode from '@/components/PoolNode.vue';
 import FlowLines from '@/components/FlowLines.vue';
 import PoolDetailModal from '@/components/PoolDetailModal.vue';
+import DeviceListModal from '@/components/DeviceListModal.vue';
 import EmissionData from '@/components/EmissionData.vue';
 import DeviceMonitor from '@/components/DeviceMonitor.vue';
 import AlarmTable from '@/components/AlarmTable.vue';
@@ -18,6 +19,26 @@ let updateTimer: ReturnType<typeof setInterval>;
 const containerRef = ref<HTMLDivElement | null>(null);
 const containerSize = ref({ width: 0, height: 0 });
 const sidebarRef = ref<HTMLElement | null>(null);
+
+// 设备列表弹窗状态
+const deviceModalVisible = ref(false);
+const deviceModalFilterStatus = ref<'running' | 'fault' | 'stopped' | 'offline' | 'all'>('all');
+const deviceModalFilterCategory = ref('');
+
+function openDeviceModal(
+  status: 'running' | 'fault' | 'stopped' | 'offline' | 'all' = 'all',
+  category: string = ''
+) {
+  deviceModalFilterStatus.value = status;
+  deviceModalFilterCategory.value = category;
+  deviceModalVisible.value = true;
+}
+
+function closeDeviceModal() {
+  deviceModalVisible.value = false;
+  deviceModalFilterStatus.value = 'all';
+  deviceModalFilterCategory.value = '';
+}
 
 // 拓扑图设计尺寸
 const DESIGN_WIDTH = 1200;
@@ -125,12 +146,21 @@ function handleCloseModal() {
 
       <!-- 右侧数据面板 -->
       <aside ref="sidebarRef" class="right-sidebar">
-        <EmissionData />
+        <EmissionData @open-device-modal="openDeviceModal" />
         <DeviceMonitor />
       </aside>
     </main>
 
-    <PoolDetailModal :pool="store.selectedPool" @close="handleCloseModal" />
+    <PoolDetailModal
+      :pool="store.selectedPool"
+      @close="handleCloseModal"
+    />
+    <DeviceListModal
+      :visible="deviceModalVisible"
+      :filter-status="deviceModalFilterStatus"
+      :filter-category="deviceModalFilterCategory"
+      @close="closeDeviceModal"
+    />
   </div>
 </template>
 

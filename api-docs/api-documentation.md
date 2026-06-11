@@ -102,13 +102,13 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `name` | string | 是 | 水池名称，如 "集水池" |
 | `capacity` | number | 是 | 总容量(m³) |
 | `maxLevel` | number | 是 | 最大水位(m) |
-| `highLevel` | number | 是 | 高液位警戒值(m) |
-| `lowLevel` | number | 是 | 低液位警戒值(m) |
 | `currentLevel` | number | 是 | 当前水位(m) |
 | `flowRate` | number | 是 | 当前流量(m³/h) |
 | `status` | string | 是 | 运行状态：`normal`/`warning`/`danger` |
 | `devices` | array | 否 | 设备列表，见 [Device](#device设备) |
 | `sensors` | array | 否 | 传感器监测数据列表，见 [Sensor](#sensor传感器) |
+
+> **说明**：高液位和低液位警戒值已迁移至液位传感器的 `max` 和 `min` 字段中维护。
 
 ### Device（设备）
 
@@ -295,8 +295,6 @@ Token 通过登录接口获取，有效期默认 24 小时。
       "name": "集水池",
       "capacity": 800,
       "maxLevel": 5.0,
-      "highLevel": 4.5,
-      "lowLevel": 0.5,
       "currentLevel": 3.25,
       "flowRate": 120.5,
       "status": "normal",
@@ -624,52 +622,12 @@ Token 通过登录接口获取，有效期默认 24 小时。
 
 ---
 
-#### 15. 查询进出水流量历史
-
-- **接口**: `GET /history/flow`
-- **说明**: 查询系统整体进出水流量历史数据。用于 Dashboard 底部效率图表和气体图表展示。
-- **认证**: 需要
-
-**查询参数：**
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `hours` | integer | 否 | 24 | 查询时间范围（小时） |
-
-**响应数据：**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `inlet` | DataPoint[] | 进水流量数据 |
-| `outlet` | DataPoint[] | 出水流量数据 |
-
-**响应示例：**
-
-```json
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "inlet": [
-      { "timestamp": "2024-06-08T14:00:00+08:00", "value": 120.5 },
-      { "timestamp": "2024-06-08T14:05:00+08:00", "value": 118.3 }
-    ],
-    "outlet": [
-      { "timestamp": "2024-06-08T14:00:00+08:00", "value": 115.2 },
-      { "timestamp": "2024-06-08T14:05:00+08:00", "value": 112.8 }
-    ]
-  }
-}
-```
-
----
-
 ### 六、仪表盘统计
 
-#### 16. 获取仪表盘统计数据
+#### 15. 获取仪表盘统计数据
 
 - **接口**: `GET /dashboard/stats`
-- **说明**: 获取 Dashboard 右侧面板和顶部状态栏所需的统计数据。包括设备运行状态、告警数量、流量统计等。
+- **说明**: 获取 Dashboard 右侧面板所需的统计数据。包括水池总数、运行/故障设备数、各水池设备分布等。
 - **认证**: 需要
 
 **响应数据：**
@@ -679,8 +637,6 @@ Token 通过登录接口获取，有效期默认 24 小时。
 | `totalPools` | integer | 水池总数 |
 | `runningDevices` | integer | 运行中设备数 |
 | `faultDevices` | integer | 故障设备数 |
-| `activeAlarms` | integer | 活跃告警数 |
-| `totalFlowRate` | number | 总流量(m³/h) |
 | `deviceCategories` | array | 各水池设备分布统计 |
 
 **响应示例：**
@@ -693,11 +649,9 @@ Token 通过登录接口获取，有效期默认 24 小时。
     "totalPools": 9,
     "runningDevices": 27,
     "faultDevices": 2,
-    "activeAlarms": 3,
-    "totalFlowRate": 856.5,
     "deviceCategories": [
-      { "name": "缺氧池", "value": 9, "color": "#00d4ff" },
-      { "name": "调节池", "value": 12, "color": "#00ccff" }
+      { "name": "缺氧池", "value": 9 },
+      { "name": "调节池", "value": 12 }
     ]
   }
 }
@@ -705,7 +659,7 @@ Token 通过登录接口获取，有效期默认 24 小时。
 
 ---
 
-#### 17. 获取实时监控数据
+#### 16. 获取实时监控数据
 
 - **接口**: `GET /dashboard/monitor`
 - **说明**: 获取设备监控面板所需的实时数据。用于右侧"设备监控"组件展示。
@@ -743,7 +697,7 @@ Token 通过登录接口获取，有效期默认 24 小时。
 
 ### 七、MQTT消息
 
-#### 18. 发布MQTT消息（调试用）
+#### 17. 发布MQTT消息（调试用）
 
 - **接口**: `POST /mqtt/publish`
 - **说明**: 手动发布 MQTT 消息到指定主题（仅管理员使用）
