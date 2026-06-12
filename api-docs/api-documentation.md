@@ -610,12 +610,16 @@ Token 通过登录接口获取，有效期默认 24 小时。
 ```json
 [
   {
-    "timestamp": "2024-06-08T14:00:00+08:00",
-    "status": "running"
+    "createTime": "2024-06-08T14:00:00+08:00",
+    "status": "running",
+    "operation":"张三",
+    "terminal":"小程序"
   },
   {
-    "timestamp": "2024-06-08T14:30:00+08:00",
-    "status": "stopped"
+    "createTime": "2024-06-08T14:30:00+08:00",
+    "status": "stopped",
+    "operation":"张三",
+    "terminal":"大屏"
   }
 ]
 ```

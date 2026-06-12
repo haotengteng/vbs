@@ -1,0 +1,55 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: vbs-backend
+  datasource:
+    url: jdbc:postgresql://rm-cn-4ta4tomli0001ino.rwlb.rds.aliyuncs.com:5432/swims
+    username: swims
+    password: Swims#1234
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        jdbc.batch_versioned_data: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:swims-default-secret-key-must-be-changed-in-production}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Logging
+logging:
+  level:
+    com.swims: DEBUG
+    org.springframework.security: WARN
+    # 关闭 Hibernate 原生 SQL 日志，改用 p6spy 打印
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
+# p6spy 配置
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      log-format: "%(executionTime)ms | %(sql)"
+      tracing:
+        include-parameter-values: true

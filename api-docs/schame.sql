@@ -1,7 +1,7 @@
 -- SWIMS 数据库架构
 -- 污水净化监控平台数据库初始化脚本
 -- 用户表
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS user_info (
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(64),
     password VARCHAR(128),
@@ -10,12 +10,12 @@ CREATE TABLE IF NOT EXISTS user (
 );
 
 -- 用户表注释
-COMMENT ON TABLE user IS '用户表：记录平台用户的基本信息与登录凭证';
-COMMENT ON COLUMN user.id IS '主键ID';
-COMMENT ON COLUMN user.username IS '用户名，唯一标识用户';
-COMMENT ON COLUMN user.password IS '密码，存储用户登录凭证';
-COMMENT ON COLUMN user.create_time IS '创建时间，记录插入时自动生成';
-COMMENT ON COLUMN user.update_time IS '更新时间，记录更新时自动更新';
+COMMENT ON TABLE user_info IS '用户表：记录平台用户的基本信息与登录凭证';
+COMMENT ON COLUMN user_info.id IS '主键ID';
+COMMENT ON COLUMN user_info.username IS '用户名，唯一标识用户';
+COMMENT ON COLUMN user_info.password IS '密码，存储用户登录凭证';
+COMMENT ON COLUMN user_info.create_time IS '创建时间，记录插入时自动生成';
+COMMENT ON COLUMN user_info.update_time IS '更新时间，记录更新时自动更新';
 
 -- 设备信息表
 CREATE TABLE IF NOT EXISTS device (
