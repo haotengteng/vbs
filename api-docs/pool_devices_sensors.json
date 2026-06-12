@@ -1,0 +1,130 @@
+{
+  "pools": [
+    {
+      "poolId": "P-001",
+      "poolName": "集水池",
+      "devices": [
+        {"id": "p1-pump-1", "name": "进水泵1#", "type": "pump"},
+        {"id": "p1-pump-2", "name": "进水泵2#", "type": "pump"}
+      ],
+      "sensors": [
+        {"id": "p1-sensor-1", "name": "液位", "type": "level"}
+      ]
+    },
+    {
+      "poolId": "P-002",
+      "poolName": "格栅渠",
+      "devices": [
+        {"id": "p2-grating-1", "name": "格栅机", "type": "grating_machine"},
+        {"id": "p2-conveyor-1", "name": "输送机", "type": "conveyor"}
+      ],
+      "sensors": [
+        {"id": "p2-sensor-1", "name": "液位", "type": "level"}
+      ]
+    },
+    {
+      "poolId": "P-003",
+      "poolName": "调节池",
+      "devices": [
+        {"id": "p3-pump-1", "name": "提升泵1#", "type": "pump"},
+        {"id": "p3-pump-2", "name": "提升泵2#", "type": "pump"},
+        {"id": "p3-mixer-1", "name": "推流搅拌器", "type": "mixer"}
+      ],
+      "sensors": [
+        {"id": "p3-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p3-sensor-2", "name": "流量", "type": "flow"}
+      ]
+    },
+    {
+      "poolId": "P-004",
+      "poolName": "生化反应池",
+      "devices": [
+        {"id": "p4-pump-1", "name": "循环泵1#", "type": "pump"},
+        {"id": "p4-pump-2", "name": "循环泵2#", "type": "pump"},
+        {"id": "p4-heater-1", "name": "蒸汽加热器", "type": "heater"}
+      ],
+      "sensors": [
+        {"id": "p4-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p4-sensor-2", "name": "温度", "type": "temp"},
+        {"id": "p4-sensor-3", "name": "PH值", "type": "ph"},
+        {"id": "p4-sensor-4", "name": "溶解氧", "type": "do"},
+        {"id": "p4-sensor-5", "name": "污泥浓度", "type": "cod"}
+      ]
+    },
+    {
+      "poolId": "P-005",
+      "poolName": "缺氧池",
+      "devices": [
+        {"id": "p5-mixer-1", "name": "潜水推流器1#", "type": "mixer"},
+        {"id": "p5-mixer-2", "name": "潜水推流器2#", "type": "mixer"}
+      ],
+      "sensors": [
+        {"id": "p5-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p5-sensor-2", "name": "溶解氧", "type": "do"},
+        {"id": "p5-sensor-3", "name": "污泥浓度", "type": "cod"},
+        {"id": "p5-sensor-4", "name": "PH值", "type": "ph"}
+      ]
+    },
+    {
+      "poolId": "P-006",
+      "poolName": "好氧池",
+      "devices": [
+        {"id": "p6-fan-1", "name": "曝气风机1#", "type": "fan"},
+        {"id": "p6-fan-2", "name": "曝气风机2#", "type": "fan"},
+        {"id": "p6-pump-1", "name": "硝化液回流泵", "type": "pump"}
+      ],
+      "sensors": [
+        {"id": "p6-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p6-sensor-2", "name": "污泥浓度", "type": "cod"},
+        {"id": "p6-sensor-3", "name": "PH值", "type": "ph"}
+      ]
+    },
+    {
+      "poolId": "P-007",
+      "poolName": "膜池",
+      "devices": [
+        {"id": "p7-pump-1", "name": "污泥回流泵", "type": "pump"},
+        {"id": "p7-pump-2", "name": "自吸泵1#", "type": "pump"},
+        {"id": "p7-pump-3", "name": "自吸泵2#", "type": "pump"},
+        {"id": "p7-pump-4", "name": "反洗泵", "type": "pump"},
+        {"id": "p7-valve-1", "name": "电动阀", "type": "valve"}
+      ],
+      "sensors": [
+        {"id": "p7-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p7-sensor-2", "name": "污泥浓度", "type": "cod"},
+        {"id": "p7-sensor-3", "name": "跨膜压差", "type": "cod"}
+      ]
+    },
+    {
+      "poolId": "P-008",
+      "poolName": "消毒池/出水泵房",
+      "devices": [
+        {"id": "p8-doser-1", "name": "消毒加药器1#", "type": "doser"},
+        {"id": "p8-doser-2", "name": "消毒加药器2#", "type": "doser"},
+        {"id": "p8-pump-1", "name": "出水泵", "type": "pump"}
+      ],
+      "sensors": [
+        {"id": "p8-sensor-1", "name": "液位", "type": "level"},
+        {"id": "p8-sensor-2", "name": "余氯", "type": "cod"}
+      ]
+    },
+    {
+      "poolId": "P-009",
+      "poolName": "污泥浓缩池",
+      "devices": [
+        {"id": "p9-sensor-1", "name": "污泥界面仪", "type": "sensor"},
+        {"id": "p9-pump-1", "name": "污泥泵", "type": "pump"},
+        {"id": "p9-dehydrator-1", "name": "脱水机", "type": "dehydrator"}
+      ],
+      "sensors": [
+        {"id": "p9-sensor-2", "name": "液位", "type": "level"},
+        {"id": "p9-sensor-3", "name": "污泥浓度", "type": "cod"}
+      ]
+    }
+  ],
+  "summary": {
+    "totalPools": 9,
+    "totalDevices": 25,
+    "totalSensors": 24
+  }
+}
