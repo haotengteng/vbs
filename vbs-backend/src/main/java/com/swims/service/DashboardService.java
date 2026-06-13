@@ -28,21 +28,24 @@ public class DashboardService {
     private final SensorRepository sensorRepository;
     private final SensorRecordRepository sensorRecordRepository;
 
+
     public DashboardStatsDto getStats() {
         List<Pool> pools = poolRepository.findAll();
         long runningDevices = deviceRepository.countByStatus("running");
         long faultDevices = deviceRepository.countByStatus("fault");
 
-        // deviceCategories: group devices by pool_name
+        // deviceCategories: group devices by pool_name (only specific pools)
+        List<String> targetPools = List.of("集水池", "缺氧池", "膜池", "污泥浓缩池");
         List<Device> allDevices = deviceRepository.findAll();
         Map<String, Long> categoryMap = allDevices.stream()
+                .filter(d -> d.getPoolName() != null && targetPools.contains(d.getPoolName()))
                 .collect(Collectors.groupingBy(
-                        d -> d.getPoolName() != null ? d.getPoolName() : "未分类",
+                        Device::getPoolName,
                         Collectors.counting()
                 ));
 
-        List<DashboardStatsDto.CategoryDto> categories = categoryMap.entrySet().stream()
-                .map(e -> new DashboardStatsDto.CategoryDto(e.getKey(), e.getValue().intValue()))
+        List<DashboardStatsDto.CategoryDto> categories = targetPools.stream()
+                .map(name -> new DashboardStatsDto.CategoryDto(name, categoryMap.getOrDefault(name, 0L).intValue()))
                 .collect(Collectors.toList());
 
         DashboardStatsDto stats = new DashboardStatsDto();
@@ -80,7 +83,6 @@ public class DashboardService {
                 }
             }
 
-            String icon = mapSensorTypeToIcon(sensor.getSensorType());
             String label = sensor.getSensorName();
             final String labelForCheck = label;
             // If multiple pools have same sensor name, append pool name
@@ -93,22 +95,10 @@ public class DashboardService {
                     String.format("%.2f", value),
                     sensor.getUnit() != null ? sensor.getUnit() : "",
                     status,
-                    icon
+                    sensor.getSensorType()
             ));
         }
 
         return items;
-    }
-
-    private String mapSensorTypeToIcon(String sensorType) {
-        if (sensorType == null) return "gauge";
-        return switch (sensorType.toLowerCase()) {
-            case "level", "flow" -> "gauge";
-            case "ph" -> "droplet";
-            case "temp" -> "thermometer";
-            case "do" -> "wind";
-            case "cod", "nh3", "turb" -> "flask";
-            default -> "gauge";
-        };
     }
 }

@@ -12,5 +12,5 @@ public class MonitorItemDto {
     private String value;
     private String unit;
     private String status;
-    private String icon;
+    private String type;
 }

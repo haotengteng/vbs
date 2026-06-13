@@ -36,6 +36,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/login").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/simulator/**").permitAll()
                 .requestMatchers("/mqtt/publish").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

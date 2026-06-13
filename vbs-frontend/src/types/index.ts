@@ -59,6 +59,8 @@ export interface SensorHistory {
   sensorId: string;
   sensorName: string;
   unit: string;
+  min: number;
+  max: number;
   data: DataPoint[];
 }
 
@@ -88,5 +90,5 @@ export interface MonitorItem {
   value: string;
   unit: string;
   status: 'normal' | 'warning' | 'danger';
-  icon: string;
+  type: string;
 }

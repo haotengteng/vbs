@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue';
 import type { SensorHistory } from '@/types';
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
+import { zhCN } from 'date-fns/locale';
 
 interface Props {
   history: SensorHistory | null;
@@ -9,28 +12,60 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{
   timeRangeChange: [hours: number];
+  customTimeRangeChange: [startTime: string, endTime: string];
 }>();
+
+const zhLocale = zhCN;
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const chartContainerRef = ref<HTMLDivElement | null>(null);
 
 const hasData = computed(() => props.history !== null && props.history.data.length > 0);
 
-const timeRange = ref(3);
+const timeRange = ref(30);
+const isCustom = ref(false);
+const showCustomPicker = ref(false);
+const customStart = ref<Date>(new Date());
+const customEnd = ref<Date>(new Date());
+
 const timeOptions = [
-  { label: '3小时', value: 3 },
-  { label: '6小时', value: 6 },
-  { label: '12小时', value: 12 },
-  { label: '24小时', value: 24 },
-  { label: '3天', value: 72 },
-  { label: '6天', value: 144 },
-  { label: '12天', value: 288 },
+  { label: '30分钟', value: 30 },
+  { label: '1小时', value: 60 },
+  { label: '3小时', value: 180 },
+  { label: '1天', value: 1440 },
+  { label: '自定义', value: -1 },
 ];
 
-function onTimeChange(hours: number) {
-  timeRange.value = hours;
-  emit('timeRangeChange', hours);
+function onTimeChange(minutes: number) {
+  if (minutes === -1) {
+    isCustom.value = true;
+    showCustomPicker.value = true;
+    return;
+  }
+  isCustom.value = false;
+  showCustomPicker.value = false;
+  timeRange.value = minutes;
+  emit('timeRangeChange', minutes);
 }
+
+function formatLocalDateTime(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function applyCustomRange() {
+  if (!customStart.value || !customEnd.value) return;
+  const start = customStart.value.getTime();
+  const end = customEnd.value.getTime();
+  if (start >= end) return;
+  timeRange.value = (end - start) / (1000 * 60);
+  emit('customTimeRangeChange', formatLocalDateTime(customStart.value), formatLocalDateTime(customEnd.value));
+}
+
+// 默认自定义时间为最近1小时
+const now = new Date();
+customEnd.value = new Date(now);
+customStart.value = new Date(now.getTime() - 60 * 60 * 1000);
 
 function drawChart() {
   const canvas = canvasRef.value;
@@ -84,6 +119,23 @@ function drawChart() {
     ctx.fillText(value.toFixed(1), padding.left - 6, y);
   }
 
+  // 按选择的时间范围计算 X 轴刻度
+  const endTime = isCustom.value && customEnd.value
+    ? customEnd.value.getTime()
+    : Date.now();
+  const startTime = isCustom.value && customStart.value
+    ? customStart.value.getTime()
+    : endTime - timeRange.value * 60 * 1000;
+  const spanMs = endTime - startTime;
+  const showDate = spanMs > 24 * 60 * 60 * 1000;
+
+  // 将数据点映射到时间轴上的辅助函数
+  function getX(timestamp: string) {
+    const t = new Date(timestamp).getTime();
+    const ratio = (t - startTime) / spanMs;
+    return padding.left + Math.max(0, Math.min(1, ratio)) * chartWidth;
+  }
+
   // 绘制折线
   if (data.length > 1) {
     ctx.strokeStyle = '#00d4ff';
@@ -93,7 +145,7 @@ function drawChart() {
     ctx.beginPath();
 
     data.forEach((point, index) => {
-      const x = padding.left + (chartWidth / (data.length - 1)) * index;
+      const x = getX(point.timestamp);
       const y = padding.top + chartHeight - ((point.value - yMin) / yRange) * chartHeight;
 
       if (index === 0) {
@@ -107,18 +159,18 @@ function drawChart() {
 
     // 绘制渐变填充
     ctx.beginPath();
-    const firstX = padding.left;
+    const firstX = getX(data[0].timestamp);
     const firstY = padding.top + chartHeight - ((data[0].value - yMin) / yRange) * chartHeight;
     ctx.moveTo(firstX, firstY);
 
-    data.forEach((point, index) => {
-      const x = padding.left + (chartWidth / (data.length - 1)) * index;
+    data.forEach((point) => {
+      const x = getX(point.timestamp);
       const y = padding.top + chartHeight - ((point.value - yMin) / yRange) * chartHeight;
       ctx.lineTo(x, y);
     });
 
-    ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
-    ctx.lineTo(padding.left, padding.top + chartHeight);
+    ctx.lineTo(getX(data[data.length - 1].timestamp), padding.top + chartHeight);
+    ctx.lineTo(firstX, padding.top + chartHeight);
     ctx.closePath();
 
     const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
@@ -128,8 +180,8 @@ function drawChart() {
     ctx.fill();
 
     // 绘制数据点
-    data.forEach((point, index) => {
-      const x = padding.left + (chartWidth / (data.length - 1)) * index;
+    data.forEach((point) => {
+      const x = getX(point.timestamp);
       const y = padding.top + chartHeight - ((point.value - yMin) / yRange) * chartHeight;
 
       ctx.beginPath();
@@ -142,35 +194,22 @@ function drawChart() {
     });
   }
 
-  // X轴时间标签 - 固定6个均匀分布的刻度
+  // X轴时间标签 - 固定6个均匀分布的刻度，基于选择的时间范围
   if (data.length > 0) {
-    const timeLabels: number[] = [];
-    const maxIndex = data.length - 1;
     for (let i = 0; i < 6; i++) {
-      const idx = Math.round((maxIndex / 5) * i);
-      if (!timeLabels.includes(idx)) {
-        timeLabels.push(idx);
-      }
-    }
-
-    const firstTime = new Date(data[0].timestamp);
-    const lastTime = new Date(data[data.length - 1].timestamp);
-    const spanMs = lastTime.getTime() - firstTime.getTime();
-    const showDate = spanMs > 24 * 60 * 60 * 1000;
-
-    timeLabels.forEach((index) => {
-      const x = padding.left + (chartWidth / (data.length - 1)) * index;
-      const time = new Date(data[index].timestamp);
+      const ratio = i / 5;
+      const x = padding.left + ratio * chartWidth;
+      const labelTime = new Date(startTime + ratio * spanMs);
       const timeStr = showDate
-        ? `${time.getMonth() + 1}/${time.getDate()} ${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`
-        : `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+        ? `${labelTime.getMonth() + 1}/${labelTime.getDate()} ${labelTime.getHours().toString().padStart(2, '0')}:${labelTime.getMinutes().toString().padStart(2, '0')}`
+        : `${labelTime.getHours().toString().padStart(2, '0')}:${labelTime.getMinutes().toString().padStart(2, '0')}`;
 
       ctx.fillStyle = '#64748b';
       ctx.font = '9px Roboto Mono, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText(timeStr, x, padding.top + chartHeight + 6);
-    });
+    }
   }
 }
 
@@ -188,6 +227,9 @@ watch(() => props.history, () => {
         <div class="chart-header-mini">
           <span class="sensor-name">{{ history?.sensorName }}</span>
           <span class="sensor-unit">{{ history?.unit }}</span>
+          <span v-if="history && (history.min || history.max)" class="range-info">
+            量程: {{ history.min.toFixed(2) }} ~ {{ history.max.toFixed(2) }}{{ history.unit }}
+          </span>
           <span class="current-value-mini">
             当前: {{ history?.data[history.data.length - 1]?.value.toFixed(2) }}{{ history?.unit }}
           </span>
@@ -197,12 +239,45 @@ watch(() => props.history, () => {
             v-for="opt in timeOptions"
             :key="opt.value"
             class="time-btn"
-            :class="{ active: timeRange === opt.value }"
+            :class="{ active: isCustom ? opt.value === -1 : timeRange === opt.value }"
             @click="onTimeChange(opt.value)"
           >
             {{ opt.label }}
           </button>
         </div>
+        <Transition name="picker-slide">
+          <div v-if="showCustomPicker" class="custom-time-picker">
+            <div class="picker-row">
+              <label class="picker-label">开始</label>
+              <VueDatePicker
+                v-model="customStart"
+                :dark="true"
+                :locale="zhLocale"
+                :enable-time-picker="true"
+                :format="'yyyy-MM-dd HH:mm'"
+                :minutes-increment="1"
+                :auto-apply="true"
+                :clearable="false"
+                class="picker-datepicker"
+              />
+            </div>
+            <div class="picker-row">
+              <label class="picker-label">结束</label>
+              <VueDatePicker
+                v-model="customEnd"
+                :dark="true"
+                :locale="zhLocale"
+                :enable-time-picker="true"
+                :format="'yyyy-MM-dd HH:mm'"
+                :minutes-increment="1"
+                :auto-apply="true"
+                :clearable="false"
+                class="picker-datepicker"
+              />
+            </div>
+            <button class="picker-confirm" @click="applyCustomRange">确认</button>
+          </div>
+        </Transition>
         <canvas ref="canvasRef" class="chart-canvas"></canvas>
       </div>
     </Transition>
@@ -241,6 +316,12 @@ watch(() => props.history, () => {
   background: rgba(30, 58, 95, 0.4);
   padding: 1px 6px;
   border-radius: 3px;
+}
+
+.range-info {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: 'Roboto Mono', monospace;
 }
 
 .current-value-mini {
@@ -299,6 +380,124 @@ watch(() => props.history, () => {
   background: rgba(0, 212, 255, 0.15);
   border-color: rgba(0, 212, 255, 0.4);
   color: #00d4ff;
+}
+
+.custom-time-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: rgba(15, 29, 50, 0.8);
+  border: 1px solid rgba(30, 58, 95, 0.6);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.picker-label {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.picker-datepicker {
+  width: 192px;
+  font-size: 10px;
+}
+
+.picker-datepicker :deep(.dp__input) {
+  background: rgba(30, 58, 95, 0.4);
+  border: 1px solid rgba(30, 58, 95, 0.6);
+  border-radius: 4px;
+  color: #e2e8f0;
+  padding: 3px 8px;
+  padding-left: 28px;
+  font-size: 10px;
+  font-family: 'Roboto Mono', monospace;
+  height: auto;
+  min-height: 24px;
+}
+
+.picker-datepicker :deep(.dp__input:hover) {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.picker-datepicker :deep(.dp__input_icon) {
+  color: #94a3b8;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+}
+
+.picker-datepicker :deep(.dp__clear_icon) {
+  display: none;
+}
+
+.picker-datepicker :deep(.dp__menu) {
+  font-size: 11px;
+  border-radius: 6px;
+  border: 1px solid rgba(30, 58, 95, 0.8);
+}
+
+.picker-datepicker :deep(.dp__calendar_header) {
+  font-size: 10px;
+}
+
+.picker-datepicker :deep(.dp__cell_inner) {
+  font-size: 10px;
+  width: 28px;
+  height: 28px;
+}
+
+.picker-datepicker :deep(.dp__month_year) {
+  font-size: 11px;
+}
+
+.picker-datepicker :deep(.dp__button) {
+  font-size: 10px;
+}
+
+.picker-confirm {
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.picker-confirm:hover {
+  background: rgba(0, 212, 255, 0.25);
+}
+
+/* 时间选择器展开动画 */
+.picker-slide-enter-active,
+.picker-slide-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.picker-slide-enter-from,
+.picker-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.picker-slide-enter-to,
+.picker-slide-leave-from {
+  opacity: 1;
+  max-height: 60px;
 }
 
 .chart-expand-enter-to,

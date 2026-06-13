@@ -142,11 +142,16 @@ export async function getAlarmStats(): Promise<AlarmStats> {
 // History
 export async function getSensorHistory(
   sensorId: string,
-  hours: number = 24,
-  interval: number = 5
+  minutes: number = 30,
+  interval: number = 5,
+  startTime?: string,
+  endTime?: string
 ): Promise<DataPoint[]> {
+  const params: Record<string, unknown> = { minutes, interval };
+  if (startTime) params.startTime = startTime;
+  if (endTime) params.endTime = endTime;
   const res = await client.get<ApiResponse<DataPoint[]>>(`/history/sensor/${sensorId}`, {
-    params: { hours, interval },
+    params,
   });
   return res.data.data;
 }
@@ -169,5 +174,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
 export async function getMonitorItems(): Promise<MonitorItem[]> {
   const res = await client.get<ApiResponse<MonitorItem[]>>('/dashboard/monitor');
+  return res.data.data;
+}
+
+// Simulator
+export async function startSimulator(): Promise<string> {
+  const res = await client.post<ApiResponse<string>>('/simulator/start');
+  return res.data.data;
+}
+
+export async function stopSimulator(): Promise<string> {
+  const res = await client.post<ApiResponse<string>>('/simulator/stop');
+  return res.data.data;
+}
+
+export async function getSimulatorStatus(): Promise<{ running: boolean }> {
+  const res = await client.get<ApiResponse<{ running: boolean }>>('/simulator/status');
   return res.data.data;
 }

@@ -14,6 +14,7 @@ export const useProcessStore = defineStore('process', () => {
   const deviceStatusHistories = ref<Map<string, DeviceStatusHistory>>(new Map());
   const dashboardStats = ref<DashboardStats | null>(null);
   const monitorItems = ref<MonitorItem[]>([]);
+  const simulatorRunning = ref(false);
 
   const selectedPool = computed(() => {
     return pools.value.find((p) => p.id === selectedPoolId.value) || null;
@@ -68,29 +69,36 @@ export const useProcessStore = defineStore('process', () => {
     await Promise.all([fetchPools(), fetchAlarms(), fetchDashboardStats(), fetchMonitorItems()]);
   }
 
-  async function getSensorHistory(poolId: string, sensorId: string, hours: number = 3): Promise<SensorHistory | undefined> {
+  async function getSensorHistory(
+    poolId: string,
+    sensorId: string,
+    minutes: number = 30,
+    startTime?: string,
+    endTime?: string
+  ): Promise<SensorHistory | undefined> {
     const key = `${poolId}-${sensorId}`;
     try {
-      const data = await api.getSensorHistory(sensorId, hours, 5);
+      const data = await api.getSensorHistory(sensorId, minutes, 5, startTime, endTime);
       const pool = pools.value.find((p) => p.id === poolId);
       let sensorName = sensorId;
       let unit = '';
+      let min = 0;
+      let max = 0;
       if (pool) {
-        if (sensorId === 'level') {
-          sensorName = '当前水位';
-          unit = 'm';
-        } else {
-          const sensor = pool.sensors.find((s) => s.id === sensorId);
-          if (sensor) {
-            sensorName = sensor.name;
-            unit = sensor.unit;
-          }
+        const sensor = pool.sensors.find((s) => s.id === sensorId);
+        if (sensor) {
+          sensorName = sensor.name;
+          unit = sensor.unit;
+          min = sensor.min;
+          max = sensor.max;
         }
       }
       const history: SensorHistory = {
         sensorId,
         sensorName,
         unit,
+        min,
+        max,
         data,
       };
       sensorHistories.value.set(key, history);
@@ -146,11 +154,41 @@ export const useProcessStore = defineStore('process', () => {
     isRunning.value = !isRunning.value;
   }
 
+  async function fetchSimulatorStatus() {
+    try {
+      const status = await api.getSimulatorStatus();
+      simulatorRunning.value = status.running;
+    } catch (e) {
+      console.error('Failed to fetch simulator status:', e);
+    }
+  }
+
+  async function startSimulator() {
+    try {
+      await api.startSimulator();
+      simulatorRunning.value = true;
+    } catch (e) {
+      console.error('Failed to start simulator:', e);
+    }
+  }
+
+  async function stopSimulator() {
+    try {
+      await api.stopSimulator();
+      simulatorRunning.value = false;
+    } catch (e) {
+      console.error('Failed to stop simulator:', e);
+    }
+  }
+
   async function toggleDeviceStatus(poolId: string, deviceId: string) {
     const pool = pools.value.find((p) => p.id === poolId);
     if (!pool) return;
     const device = pool.devices.find((d) => d.id === deviceId);
     if (!device) return;
+
+    // 只有运行中或停止的设备允许手动控制；故障和离线设备不可操作
+    if (device.status !== 'running' && device.status !== 'stopped') return;
 
     const operation = device.status === 'running' ? 'stop' : 'start';
     try {
@@ -175,6 +213,7 @@ export const useProcessStore = defineStore('process', () => {
     deviceStatusHistories,
     dashboardStats,
     monitorItems,
+    simulatorRunning,
     updateData,
     selectPool,
     acknowledgeAlarm,
@@ -186,5 +225,8 @@ export const useProcessStore = defineStore('process', () => {
     fetchAlarms,
     fetchDashboardStats,
     fetchMonitorItems,
+    fetchSimulatorStatus,
+    startSimulator,
+    stopSimulator,
   };
 });

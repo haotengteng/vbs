@@ -21,8 +21,9 @@ const selectedSensor = ref<SensorHistory | null>(null);
 const activeSensorId = ref<string | null>(null);
 const selectedDeviceHistory = ref<DeviceStatusHistory | null>(null);
 const activeDeviceId = ref<string | null>(null);
-const selectedSensorTimeRange = ref(3);
-const selectedDeviceTimeRange = ref(3);
+const selectedSensorTimeRange = ref(30);
+const isCustomSensorTime = ref(false);
+const selectedDeviceTimeRange = ref(180);
 
 const isOpen = computed(() => props.pool !== null);
 
@@ -67,9 +68,10 @@ const staticParams = computed(() => {
 // 实时传感器（包含水位和其他动态传感器）
 const realtimeSensors = computed(() => {
   if (!props.pool) return [];
+  const levelSensor = props.pool.sensors.find((s) => s.name === '液位');
   const sensors = [
     {
-      id: 'level',
+      id: levelSensor?.id || 'level',
       name: '当前水位',
       value: props.pool.currentLevel,
       unit: 'm',
@@ -133,15 +135,28 @@ async function toggleSensorHistory(sensorId: string, sensorName: string, unit: s
       sensorId,
       sensorName,
       unit,
+      min: 0,
+      max: 0,
       data: [],
     };
   }
 }
 
-async function onSensorTimeRangeChange(hours: number) {
-  selectedSensorTimeRange.value = hours;
+async function onSensorTimeRangeChange(minutes: number) {
+  selectedSensorTimeRange.value = minutes;
+  isCustomSensorTime.value = false;
   if (activeSensorId.value && props.pool) {
-    const history = await store.getSensorHistory(props.pool.id, activeSensorId.value, hours);
+    const history = await store.getSensorHistory(props.pool.id, activeSensorId.value, minutes);
+    if (history && history.data.length > 0) {
+      selectedSensor.value = history;
+    }
+  }
+}
+
+async function onCustomSensorTimeRangeChange(startTime: string, endTime: string) {
+  isCustomSensorTime.value = true;
+  if (activeSensorId.value && props.pool) {
+    const history = await store.getSensorHistory(props.pool.id, activeSensorId.value, 180, startTime, endTime);
     if (history && history.data.length > 0) {
       selectedSensor.value = history;
     }
@@ -247,6 +262,7 @@ async function onDeviceTimeRangeChange(hours: number) {
               v-if="selectedSensor && activeSensorId"
               :history="selectedSensor"
               @time-range-change="onSensorTimeRangeChange"
+              @custom-time-range-change="onCustomSensorTimeRangeChange"
             />
           </div>
 

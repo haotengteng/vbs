@@ -27,8 +27,8 @@ const statusColor = computed(() => {
   }
 });
 
-const isSpinning = computed(() => props.type === 'blower' && props.status === 'running');
-const isDripping = computed(() => props.type === 'dosing' && props.status === 'running');
+const isSpinning = computed(() => ['blower', 'fan', 'dehydrator'].includes(props.type) && props.status === 'running');
+const isDripping = computed(() => ['dosing', 'doser'].includes(props.type) && props.status === 'running');
 const isPulsing = computed(() => props.type === 'pump' && props.status === 'running');
 </script>
 
@@ -50,8 +50,8 @@ const isPulsing = computed(() => props.type === 'pump' && props.status === 'runn
       <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5" />
     </template>
 
-    <!-- blower: 风扇 -->
-    <template v-else-if="type === 'blower'">
+    <!-- blower / fan: 风扇/曝气风机 -->
+    <template v-else-if="type === 'blower' || type === 'fan'">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
       <circle cx="12" cy="12" r="2" />
       <g class="fan-blades">
@@ -95,14 +95,31 @@ const isPulsing = computed(() => props.type === 'pump' && props.status === 'runn
       <circle cx="12" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="1.2" />
     </template>
 
-    <!-- dosing: 消毒加药器 -->
-    <template v-else-if="type === 'dosing'">
+    <!-- dosing / doser: 消毒加药器 -->
+    <template v-else-if="type === 'dosing' || type === 'doser'">
       <rect x="8" y="2" width="8" height="12" rx="2" />
       <rect x="11" y="14" width="2" height="4" rx="0.5" />
       <path d="M11 20c0 1.5 0.5 2 1 2s1-0.5 1-2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
       <circle cx="10" cy="7" r="1.2" fill="none" stroke="currentColor" stroke-width="0.8" />
       <circle cx="14" cy="10" r="1.2" fill="none" stroke="currentColor" stroke-width="0.8" />
       <circle cx="12" cy="15.5" r="0.9" class="drip-drop" />
+    </template>
+
+    <!-- dehydrator: 脱水机 -->
+    <template v-else-if="type === 'dehydrator'">
+      <!-- 底座 -->
+      <rect x="5" y="17" width="14" height="4" rx="1" />
+      <!-- 滚筒外框 -->
+      <circle cx="12" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <!-- 旋转滚筒内部 -->
+      <g class="fan-blades">
+        <line x1="7" y1="11" x2="17" y2="11" />
+        <line x1="12" y1="6" x2="12" y2="16" />
+      </g>
+      <!-- 中心轴 -->
+      <circle cx="12" cy="11" r="1.5" />
+      <!-- 顶部进料口 -->
+      <rect x="10" y="2" width="4" height="3" rx="0.5" />
     </template>
 
     <!-- default: 通用齿轮 -->

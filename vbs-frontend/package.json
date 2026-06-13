@@ -11,7 +11,9 @@
   "dependencies": {
     "@lucide/vue": "^1.17.0",
     "@tailwindcss/vite": "^4.3.0",
+    "@vuepic/vue-datepicker": "^14.0.0",
     "axios": "^1.17.0",
+    "date-fns": "^4.4.0",
     "echarts": "^6.1.0",
     "lucide-vue-next": "^1.0.0",
     "pinia": "^3.0.4",

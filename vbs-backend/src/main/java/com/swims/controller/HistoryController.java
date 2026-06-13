@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -23,9 +24,11 @@ public class HistoryController {
     @GetMapping("/sensor/{sensorId}")
     public ApiResponse<List<DataPointDto>> getSensorHistory(
             @PathVariable String sensorId,
-            @RequestParam(defaultValue = "24") int hours,
-            @RequestParam(defaultValue = "5") int interval) {
-        return ApiResponse.success(historyService.getSensorHistory(sensorId, hours, interval));
+            @RequestParam(defaultValue = "180") int minutes,
+            @RequestParam(defaultValue = "5") int interval,
+            @RequestParam(required = false) LocalDateTime startTime,
+            @RequestParam(required = false) LocalDateTime endTime) {
+        return ApiResponse.success(historyService.getSensorHistory(sensorId, minutes, interval, startTime, endTime));
     }
 
     @GetMapping("/device/{deviceId}")

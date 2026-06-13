@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Activity, AlertTriangle, AlertCircle, Clock, Maximize, Minimize } from '@lucide/vue';
+import { Activity, AlertTriangle, AlertCircle, Clock, Maximize, Minimize, Play, Square } from '@lucide/vue';
 import { useProcessStore } from '@/stores/processStore';
 
 const store = useProcessStore();
@@ -31,10 +31,20 @@ function onFullscreenChange() {
   );
 }
 
+async function toggleSimulator() {
+  if (store.simulatorRunning) {
+    await store.stopSimulator();
+  } else {
+    await store.startSimulator();
+  }
+}
+
 onMounted(() => {
   timer = setInterval(() => {
     currentTime.value = new Date();
   }, 1000);
+
+  store.fetchSimulatorStatus();
 
   document.addEventListener('fullscreenchange', onFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
@@ -76,7 +86,11 @@ function formatTime(date: Date): string {
     </div>
 
     <div class="header-center">
-      <div class="system-status">
+      <div
+        class="system-status"
+        :class="{ running: store.isRunning, paused: !store.isRunning }"
+        @click="store.toggleRunning"
+      >
         <Activity :size="16" class="status-icon" :class="{ active: store.isRunning }" />
         <span class="status-text">{{ store.isRunning ? '系统运行中' : '系统已暂停' }}</span>
       </div>
@@ -98,6 +112,16 @@ function formatTime(date: Date): string {
         <Clock :size="16" />
         <span class="font-mono">{{ formatTime(currentTime) }}</span>
       </div>
+
+      <button
+        class="simulator-btn"
+        :class="{ active: store.simulatorRunning }"
+        @click="toggleSimulator"
+        :title="store.simulatorRunning ? '停止模拟数据' : '开启模拟数据'"
+      >
+        <Square v-if="store.simulatorRunning" :size="16" />
+        <Play v-else :size="16" />
+      </button>
 
       <button
         class="fullscreen-btn"
@@ -207,6 +231,36 @@ function formatTime(date: Date): string {
   background: rgba(30, 58, 95, 0.3);
   border-radius: 20px;
   border: 1px solid rgba(30, 58, 95, 0.5);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.system-status:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.system-status.running {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.system-status.running:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.system-status.paused {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.system-status.paused:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
 }
 
 .status-icon {
@@ -217,6 +271,10 @@ function formatTime(date: Date): string {
 .status-icon.active {
   color: #10b981;
   animation: pulse 2s ease-in-out infinite;
+}
+
+.system-status.paused .status-icon {
+  color: #f59e0b;
 }
 
 @keyframes pulse {
@@ -231,6 +289,15 @@ function formatTime(date: Date): string {
 .status-text {
   font-size: 13px;
   color: #a0beeb;
+  transition: color 0.3s;
+}
+
+.system-status.running .status-text {
+  color: #34d399;
+}
+
+.system-status.paused .status-text {
+  color: #fbbf24;
 }
 
 .header-right {
@@ -316,6 +383,51 @@ function formatTime(date: Date): string {
 }
 
 .fullscreen-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.simulator-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(30, 58, 95, 0.3);
+  border: 1px solid rgba(100, 130, 180, 0.25);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.simulator-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.simulator-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+.simulator-btn.active:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+}
+
+.simulator-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.simulator-btn:hover svg {
   transform: scale(1.1);
 }
 </style>

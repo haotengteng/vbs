@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import { useProcessStore } from '@/stores/processStore';
 import HeaderBar from '@/components/HeaderBar.vue';
 
@@ -14,8 +14,8 @@ import EfficiencyChart from '@/components/EfficiencyChart.vue';
 import GasChart from '@/components/GasChart.vue';
 
 const store = useProcessStore();
-let updateTimer: ReturnType<typeof setInterval>;
-let deviceStatsTimer: ReturnType<typeof setInterval>;
+let updateTimer: ReturnType<typeof setInterval> | null = null;
+let deviceStatsTimer: ReturnType<typeof setInterval> | null = null;
 
 const containerRef = ref<HTMLDivElement | null>(null);
 const containerSize = ref({ width: 0, height: 0 });
@@ -87,28 +87,48 @@ function syncSidebarHeight() {
   }
 }
 
-onMounted(() => {
-  store.updateData();
-
+function startTimers() {
+  stopTimers();
   // 拓扑图与报警：2秒刷新
   updateTimer = setInterval(() => {
     store.fetchPools();
     store.fetchAlarms();
   }, 2000);
-
   // 设备状态与设备统计：5秒刷新
   deviceStatsTimer = setInterval(() => {
     store.fetchDashboardStats();
     store.fetchMonitorItems();
   }, 5000);
+}
 
+function stopTimers() {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+    updateTimer = null;
+  }
+  if (deviceStatsTimer) {
+    clearInterval(deviceStatsTimer);
+    deviceStatsTimer = null;
+  }
+}
+
+onMounted(() => {
+  store.updateData();
+  startTimers();
   updateContainerSize();
   window.addEventListener('resize', updateContainerSize);
 });
 
+watch(() => store.isRunning, (running) => {
+  if (running) {
+    startTimers();
+  } else {
+    stopTimers();
+  }
+});
+
 onUnmounted(() => {
-  clearInterval(updateTimer);
-  clearInterval(deviceStatsTimer);
+  stopTimers();
   window.removeEventListener('resize', updateContainerSize);
 });
 

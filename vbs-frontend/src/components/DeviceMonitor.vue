@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Gauge, Activity, Droplets, Settings } from 'lucide-vue-next';
+import SensorTypeIcon from '@/components/icons/sensors/SensorTypeIcon.vue';
 import PanelTitle from './PanelTitle.vue';
 import { useProcessStore } from '@/stores/processStore';
 
@@ -11,12 +11,12 @@ const monitorData = computed(() => {
     return store.monitorItems;
   }
   return [
-    { label: '膜池液位', value: '1.08', unit: 'm', status: 'normal' as const, icon: 'gauge' },
-    { label: '膜池流量', value: '0.6', unit: 'm³/h', status: 'normal' as const, icon: 'activity' },
-    { label: '酸碱度', value: '7.2', unit: 'pH', status: 'normal' as const, icon: 'droplets' },
-    { label: '风机状态', value: '正常', unit: '', status: 'normal' as const, icon: 'gauge' },
-    { label: '循环泵', value: '正常', unit: '', status: 'normal' as const, icon: 'activity' },
-    { label: '回流泵', value: '正常', unit: '', status: 'normal' as const, icon: 'settings' },
+    { label: '膜池液位', value: '1.08', unit: 'm', status: 'normal' as const, type: 'level' },
+    { label: '膜池流量', value: '0.6', unit: 'm³/h', status: 'normal' as const, type: 'flow' },
+    { label: '酸碱度', value: '7.2', unit: 'pH', status: 'normal' as const, type: 'ph' },
+    { label: '风机状态', value: '正常', unit: '', status: 'normal' as const, type: 'gauge' },
+    { label: '循环泵', value: '正常', unit: '', status: 'normal' as const, type: 'activity' },
+    { label: '回流泵', value: '正常', unit: '', status: 'normal' as const, type: 'settings' },
   ];
 });
 </script>
@@ -31,10 +31,7 @@ const monitorData = computed(() => {
         class="monitor-item"
       >
         <div class="item-icon-wrapper">
-          <Gauge v-if="item.icon === 'gauge'" :size="20" class="item-icon" />
-          <Activity v-else-if="item.icon === 'activity'" :size="20" class="item-icon" />
-          <Droplets v-else-if="item.icon === 'droplets'" :size="20" class="item-icon" />
-          <Settings v-else :size="20" class="item-icon" />
+          <SensorTypeIcon :type="item.type" :size="20" class="item-icon" />
         </div>
         <div class="item-info">
           <div class="item-label">{{ item.label }}</div>

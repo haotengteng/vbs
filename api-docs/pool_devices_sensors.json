@@ -15,8 +15,7 @@
       "poolId": "P-002",
       "poolName": "格栅渠",
       "devices": [
-        {"id": "p2-grating-1", "name": "格栅机", "type": "grating_machine"},
-        {"id": "p2-conveyor-1", "name": "输送机", "type": "conveyor"}
+        {"id": "p2-grating-1", "name": "格栅机", "type": "grating_machine"}
       ],
       "sensors": [
         {"id": "p2-sensor-1", "name": "液位", "type": "level"}
@@ -37,7 +36,7 @@
     },
     {
       "poolId": "P-004",
-      "poolName": "生化反应池",
+      "poolName": "厌氧池",
       "devices": [
         {"id": "p4-pump-1", "name": "循环泵1#", "type": "pump"},
         {"id": "p4-pump-2", "name": "循环泵2#", "type": "pump"},
@@ -92,12 +91,12 @@
       "sensors": [
         {"id": "p7-sensor-1", "name": "液位", "type": "level"},
         {"id": "p7-sensor-2", "name": "污泥浓度", "type": "cod"},
-        {"id": "p7-sensor-3", "name": "跨膜压差", "type": "cod"}
+        {"id": "p7-sensor-3", "name": "跨膜压差", "type": "pressure"}
       ]
     },
     {
       "poolId": "P-008",
-      "poolName": "消毒池/出水泵房",
+      "poolName": "消毒池",
       "devices": [
         {"id": "p8-doser-1", "name": "消毒加药器1#", "type": "doser"},
         {"id": "p8-doser-2", "name": "消毒加药器2#", "type": "doser"},
@@ -105,14 +104,13 @@
       ],
       "sensors": [
         {"id": "p8-sensor-1", "name": "液位", "type": "level"},
-        {"id": "p8-sensor-2", "name": "余氯", "type": "cod"}
+        {"id": "p8-sensor-2", "name": "余氯", "type": "clorine"}
       ]
     },
     {
       "poolId": "P-009",
       "poolName": "污泥浓缩池",
       "devices": [
-        {"id": "p9-sensor-1", "name": "污泥界面仪", "type": "sensor"},
         {"id": "p9-pump-1", "name": "污泥泵", "type": "pump"},
         {"id": "p9-dehydrator-1", "name": "脱水机", "type": "dehydrator"}
       ],
@@ -121,10 +119,5 @@
         {"id": "p9-sensor-3", "name": "污泥浓度", "type": "cod"}
       ]
     }
-  ],
-  "summary": {
-    "totalPools": 9,
-    "totalDevices": 25,
-    "totalSensors": 24
-  }
+  ]
 }

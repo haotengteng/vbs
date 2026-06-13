@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -25,9 +26,9 @@ public class HistoryService {
 
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
 
-    public List<DataPointDto> getSensorHistory(String sensorId, int hours, int intervalMinutes) {
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = endTime.minusHours(hours);
+    public List<DataPointDto> getSensorHistory(String sensorId, int minutes, int intervalMinutes, LocalDateTime customStart, LocalDateTime customEnd) {
+        LocalDateTime endTime = customEnd != null ? customEnd : LocalDateTime.now();
+        LocalDateTime startTime = customStart != null ? customStart : endTime.minusMinutes(minutes);
 
         List<DataPointDto> result = new ArrayList<>();
 
@@ -37,7 +38,7 @@ public class HistoryService {
             List<SensorRecord> records = sensorRecordRepository.findBySensorIdAndTimeRange(sensorId, startTime, endTime);
             for (SensorRecord record : records) {
                 result.add(new DataPointDto(
-                        record.getTime().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
+                        record.getTime().atZone(ZoneId.systemDefault()).toInstant().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
                         record.getValue()
                 ));
             }
@@ -50,7 +51,7 @@ public class HistoryService {
                 Double avg = row[1] instanceof Number ? ((Number) row[1]).doubleValue() : null;
                 if (bucket != null && avg != null) {
                     result.add(new DataPointDto(
-                            bucket.toLocalDateTime().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
+                            bucket.toLocalDateTime().atZone(ZoneId.systemDefault()).toInstant().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
                             avg
                     ));
                 }
@@ -70,7 +71,7 @@ public class HistoryService {
     private DeviceHistoryRecordDto convertDeviceRecord(DeviceRecord record) {
         DeviceHistoryRecordDto dto = new DeviceHistoryRecordDto();
         if (record.getCreateTime() != null) {
-            dto.setCreateTime(record.getCreateTime().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER));
+            dto.setCreateTime(record.getCreateTime().atZone(ZoneId.systemDefault()).toInstant().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER));
         }
         // TODO: 不确定性：device_record表无status字段，仅有operation(start/stop)和result。
         // 以下为推断映射，实际业务逻辑需确认。
