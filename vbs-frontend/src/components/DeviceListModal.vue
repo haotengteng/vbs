@@ -63,10 +63,12 @@ const filteredDevices = computed(() => {
 
   if (props.filterCategory) {
     const codeMap: Record<string, string> = {
+      '集水池': 'P-001',
       '缺氧池': 'P-005',
       '调节池': 'P-003',
       '厌氧池': 'P-004',
       '膜池': 'P-007',
+      '污泥浓缩池': 'P-009',
     };
     const targetCode = codeMap[props.filterCategory];
     if (targetCode) {

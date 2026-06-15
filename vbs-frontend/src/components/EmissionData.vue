@@ -243,8 +243,8 @@ watch(
     <PanelTitle title="设备状态" subtitle="STATUS" />
 
     <div class="device-status">
-      <div class="status-card" @click="handleStatusClick('running')">
-        <div class="flip-display clickable">
+      <div class="status-card">
+        <div class="flip-display clickable" @click="handleStatusClick('running')">
           <span
             v-for="(digit, idx) in String(runningDevices).padStart(3, '0').split('')"
             :key="`run-${idx}`"
@@ -259,8 +259,8 @@ watch(
         </div>
       </div>
 
-      <div class="status-card" @click="handleStatusClick('fault')">
-        <div class="flip-display clickable">
+      <div class="status-card">
+        <div class="flip-display clickable" @click="handleStatusClick('fault')">
           <span
             v-for="(digit, idx) in String(faultDevices).padStart(3, '0').split('')"
             :key="`fault-${idx}`"
@@ -285,11 +285,10 @@ watch(
         <div
           v-for="item in deviceCategories.slice(0, 2)"
           :key="item.name"
-          class="stat-item left clickable"
+          class="stat-item left"
           :style="{ '--item-color': item.color }"
-          @click="handleCategoryClick(item.name)"
         >
-          <div class="stat-value">
+          <div class="stat-value clickable" @click="handleCategoryClick(item.name)">
             <span class="num">{{ item.value }}</span>
             <span class="unit">台</span>
           </div>
@@ -314,11 +313,10 @@ watch(
         <div
           v-for="item in deviceCategories.slice(2)"
           :key="item.name"
-          class="stat-item right clickable"
+          class="stat-item right"
           :style="{ '--item-color': item.color }"
-          @click="handleCategoryClick(item.name)"
         >
-          <div class="stat-value">
+          <div class="stat-value clickable" @click="handleCategoryClick(item.name)">
             <span class="num">{{ item.value }}</span>
             <span class="unit">台</span>
           </div>
@@ -531,12 +529,12 @@ watch(
   transition: all 0.2s ease;
 }
 
-.status-card.clickable:hover .flip-digit {
+.flip-display.clickable:hover .flip-digit {
   border-color: rgba(0, 212, 255, 0.5);
   box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
 }
 
-.stat-item.clickable:hover .stat-value .num {
+.stat-value.clickable:hover .num {
   text-shadow: 0 0 12px color-mix(in srgb, var(--item-color, #00d4ff) 70%, transparent);
 }
 
