@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginView from '@/views/LoginView.vue';
 import Dashboard from '@/views/Dashboard.vue';
+import SvgTestView from '@/views/SvgTestView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +16,12 @@ const router = createRouter({
       path: '/',
       name: 'Dashboard',
       component: Dashboard,
+    },
+    {
+      path: '/svg-test',
+      name: 'SvgTest',
+      component: SvgTestView,
+      meta: { public: true },
     },
   ],
 });
